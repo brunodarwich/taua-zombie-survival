@@ -6,6 +6,7 @@ require('node:fs').mkdirSync('.cache', { recursive: true });
   const browser = await chromium.launch({headless:true, args:['--use-angle=swiftshader','--enable-unsafe-swiftshader']});
   try {
     const errors = [], failures = [];
+    if (!process.env.MOBILE_ONLY) {
     const page = await browser.newPage({viewport:{width:1440,height:900}});
     page.on('pageerror', e => errors.push(e.message));
     page.on('response', r => { if(r.status() >= 400) failures.push(r.status()+' '+r.url()); });
@@ -72,6 +73,7 @@ require('node:fs').mkdirSync('.cache', { recursive: true });
     await page.locator('#game-over-screen').waitFor({state:'visible'});
     await page.click('#restart-btn');await page.locator('#start-screen').waitFor({state:'visible'});
     await page.close();
+    }
     const mobile=await browser.newPage({viewport:{width:390,height:844},isMobile:true,hasTouch:true,deviceScaleFactor:1});
     mobile.on('pageerror',e=>errors.push('mobile: '+e.message));
     mobile.on('response', r=>{if(r.status()>=400)failures.push(r.status()+' '+r.url());});
@@ -107,6 +109,7 @@ require('node:fs').mkdirSync('.cache', { recursive: true });
     assert.ok(active.move > .5);assert.equal(active.fire,true);
     await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
     assert.equal(await mobile.evaluate(async()=>(await import(document.querySelector('script[type=module][src*="src/main.js"]').src)).inspectGame().inputState.isMouseDown),false);
+    await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[moveTouch]});
     await cdp.send('Input.dispatchTouchEvent',{type:'touchCancel',touchPoints:[]});
     assert.equal(await mobile.evaluate(async()=>(await import(document.querySelector('script[type=module][src*="src/main.js"]').src)).inspectGame().inputState.moveX),0);
     await mobile.tap('#zoom-in');
