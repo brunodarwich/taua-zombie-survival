@@ -197,7 +197,10 @@ function animate(ms) {
     hud.update(player, spawner.wave, spawner.survivors, RESCUE_POINT, navigation);
     if (player.hp <= 0) gameOver();
   }
-  if (gameRunning && !document.hidden) renderer.render(scene, camera);
+  if (gameRunning && !document.hidden) {
+    particleSystem.syncInstances();
+    renderer.render(scene, camera);
+  }
 }
 function gameOver() {
   gameRunning = false; resetInput();

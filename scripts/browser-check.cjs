@@ -18,7 +18,7 @@ require('node:fs').mkdirSync('.cache', { recursive: true });
     await page.click('#play-btn'); await page.click('#back-btn'); await page.click('#play-btn');
     await page.locator('.char-card').first().click();
     // Keep the test character alive while software-rendered screenshots and UI checks run.
-    await page.evaluate(async()=>{const g=(await import(document.querySelector('script[type=module][src*="src/main.js"]').src)).inspectGame();g.player.hp=g.player.maxHp=1e6;g.spawner.zombieInterval=1e6;g.renderer.setPixelRatio(0.65);});
+    await page.evaluate(async()=>{const g=(await import(document.querySelector('script[type=module][src*="src/main.js"]').src)).inspectGame();g.player.hp=g.player.maxHp=1e6;g.spawner.zombieInterval=1e6;g.renderer.setPixelRatio(0.3);});
     assert.equal(await page.locator('#mobile-controls').isVisible(), false);
     assert.equal(await page.locator('canvas').count(), 1);
     for(let i=0;i<4;i++) await page.click('#zoom-in');
@@ -80,12 +80,13 @@ require('node:fs').mkdirSync('.cache', { recursive: true });
     await mobile.goto(baseURL);await mobile.locator('.start-art').evaluate(img=>img.decode());
     for (const viewport of [{width:320,height:640},{width:768,height:1024},{width:1024,height:768},{width:390,height:844}]) {
       await mobile.setViewportSize(viewport);
+      await mobile.waitForFunction(({width,height}) => Math.abs(document.body.clientWidth-width)<1 && Math.abs(document.body.clientHeight-height)<1, viewport);
       const play = await mobile.locator('#play-btn').boundingBox();
       assert.ok(play.x>=0 && play.x+play.width<=viewport.width);
     }
     await mobile.screenshot({path:'.cache/start-mobile.png'});
     await mobile.tap('#play-btn'); await mobile.waitForTimeout(400); await mobile.locator('.char-card').first().tap(); await mobile.waitForTimeout(500); await mobile.screenshot({path:'.cache/mobile-after-select.png'});
-    await mobile.evaluate(async()=>{const g=(await import(document.querySelector('script[type=module][src*="src/main.js"]').src)).inspectGame();g.player.hp=g.player.maxHp=1e6;g.spawner.zombieInterval=1e6;g.renderer.setPixelRatio(0.65);});
+    await mobile.evaluate(async()=>{const g=(await import(document.querySelector('script[type=module][src*="src/main.js"]').src)).inspectGame();g.player.hp=g.player.maxHp=1e6;g.spawner.zombieInterval=1e6;g.renderer.setPixelRatio(0.3);});
     assert.equal(await mobile.locator('#mobile-controls').isVisible(),true);
     for (const viewport of [{width:320,height:640},{width:768,height:1024},{width:1024,height:768},{width:820,height:1180},{width:1180,height:820},{width:1366,height:1024},{width:390,height:844}]) {
       await mobile.setViewportSize(viewport);
@@ -126,3 +127,4 @@ require('node:fs').mkdirSync('.cache', { recursive: true });
     console.log('PASS: opening, selection/back, desktop/mobile zoom without firing, mouse wheel, WASD, escort around wall, safe-zone delivery, defeat/restart, rotation. No JS errors or failed requests.');
   } finally { await browser.close(); }
 })().catch(e=>{console.error(e);process.exitCode=1;});
+

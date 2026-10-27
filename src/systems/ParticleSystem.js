@@ -10,36 +10,36 @@ export class ParticleSystem {
     // Geometria compartilhada única para todas as partículas
     this.sharedGeo = new THREE.SphereGeometry(0.1, 4, 4);
 
-    // Cache de materiais por cor para evitar criar milhares de MeshBasicMaterial
-    this.materialCache = new Map();
+    this.instances = new THREE.InstancedMesh(this.sharedGeo,
+      new THREE.MeshBasicMaterial({ color: 0xffffff }), this.maxActive);
+    this.instances.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    this.instances.count = 0;
+    this.instances.frustumCulled = false;
+    this.instanceColor = new THREE.Color();
+    this.scene.add(this.instances);
     this.flashes = [];
+    this.flashPool = [];
     this.ringGeo = new THREE.RingGeometry(0.65, 1, 24);
   }
 
-  getMaterial(colorHex) {
-    if (this.materialCache.has(colorHex)) {
-      return this.materialCache.get(colorHex);
-    }
-    const mat = new THREE.MeshBasicMaterial({
-      color: colorHex,
-      transparent: true,
-      opacity: 1
-    });
-    this.materialCache.set(colorHex, mat);
-    return mat;
+  getMesh(colorHex) {
+    const mesh = this.pool.pop() || new THREE.Object3D();
+    mesh.userData.color = colorHex;
+    return mesh;
   }
 
-  getMesh(colorHex) {
-    let mesh;
-    if (this.pool.length > 0) {
-      mesh = this.pool.pop();
-      mesh.material = this.getMaterial(colorHex);
-    } else {
-      mesh = new THREE.Mesh(this.sharedGeo, this.getMaterial(colorHex));
-      this.scene.add(mesh);
+  syncInstances() {
+    this.instances.count = this.activeParticles.length;
+    for (let i = 0; i < this.activeParticles.length; i++) {
+      const { mesh } = this.activeParticles[i];
+      mesh.updateMatrix();
+      this.instances.setMatrixAt(i, mesh.matrix);
+      this.instances.setColorAt(i, this.instanceColor.setHex(mesh.userData.color));
     }
-    mesh.visible = true;
-    return mesh;
+    if (this.instances.count) {
+      this.instances.instanceMatrix.needsUpdate = true;
+      this.instances.instanceColor.needsUpdate = true;
+    }
   }
 
   recycle(p) {
@@ -83,13 +83,20 @@ export class ParticleSystem {
 
   flash(position, color, size, life, ring = false) {
     if (this.flashes.length >= 20) return;
-    const material = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 1,
-      blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
-    const mesh = new THREE.Mesh(ring ? this.ringGeo : this.sharedGeo, material);
+    let mesh = this.flashPool.pop();
+    if (!mesh) {
+      const material = new THREE.MeshBasicMaterial({ transparent: true,
+        blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
+      mesh = new THREE.Mesh(this.sharedGeo, material);
+      this.scene.add(mesh);
+    }
+    mesh.geometry = ring ? this.ringGeo : this.sharedGeo;
+    mesh.material.color.setHex(color);
+    mesh.material.opacity = 1;
+    mesh.visible = true;
     mesh.position.copy(position);
     mesh.rotation.x = -Math.PI / 2;
     mesh.scale.setScalar(size);
-    this.scene.add(mesh);
     this.flashes.push({ mesh, size, life, maxLife: life, ring });
   }
 
@@ -98,7 +105,8 @@ export class ParticleSystem {
     this.flash(position, color, 0.6, 0.12, true);
     const start = this.activeParticles.length;
     this.spawnHitSparks(position, color, 3);
-    for (const p of this.activeParticles.slice(start)) {
+    for (let i = start; i < this.activeParticles.length; i++) {
+      const p = this.activeParticles[i];
       p.velocity.copy(direction).multiplyScalar(5).addScalar(Math.random() - 0.5);
       p.life = p.maxLife = 0.12;
       p.gravity = 0;
@@ -110,7 +118,8 @@ export class ParticleSystem {
     this.flash(position, zombie ? 0xff5577 : color, zombie ? 1 : 0.7, 0.24, true);
     const start = this.activeParticles.length;
     this.spawnHitSparks(position, color, zombie ? 12 : 7);
-    for (const p of this.activeParticles.slice(start)) {
+    for (let i = start; i < this.activeParticles.length; i++) {
+      const p = this.activeParticles[i];
       if (direction) p.velocity.addScaledVector(direction, -4);
     }
   }
@@ -153,8 +162,8 @@ export class ParticleSystem {
       const f = this.flashes[i];
       f.life -= delta;
       if (f.life <= 0) {
-        this.scene.remove(f.mesh);
-        f.mesh.material.dispose();
+        f.mesh.visible = false;
+        this.flashPool.push(f.mesh);
         this.flashes.splice(i, 1);
         continue;
       }

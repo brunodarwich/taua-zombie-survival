@@ -1,30 +1,30 @@
 export const ASSETS = {
   // Tier 1: Sem equipamento (1 a 20)
-  unarmed: Array.from({ length: 20 }, (_, i) => `assets/sem equipamento (${i + 1}).png`),
+  unarmed: Array.from({ length: 20 }, (_, i) => `assets/sem equipamento (${i + 1}).webp`),
 
   // Tier 2: Player com equipamento básico
   player: [
-    'assets/player (2).png',
-    'assets/player (10).png',
-    'assets/player (11).png',
-    'assets/player (12).png',
-    'assets/player (13).png'
+    'assets/player (2).webp',
+    'assets/player (10).webp',
+    'assets/player (11).webp',
+    'assets/player (12).webp',
+    'assets/player (13).webp'
   ],
 
   // Tier 3: Player Top (1 a 10)
-  playerTop: Array.from({ length: 10 }, (_, i) => `assets/player top (${i + 1}).png`),
+  playerTop: Array.from({ length: 10 }, (_, i) => `assets/player top (${i + 1}).webp`),
 
   // Sobreviventes resgatados com capacete (1 a 10)
-  helmet: Array.from({ length: 10 }, (_, i) => `assets/capacete (${i + 1}).png`),
+  helmet: Array.from({ length: 10 }, (_, i) => `assets/capacete (${i + 1}).webp`),
 
   // Drops de equipamento
   pickups: [
-    'assets/equipamento (1).png',
-    'assets/equipamento (2).png'
+    'assets/equipamento (1).webp',
+    'assets/equipamento (2).webp'
   ],
 
   // Inimigo
-  zombie: 'assets/zombie.png'
+  zombie: 'assets/zombie.webp'
 };
 
 export const CONFIG = {

@@ -17,6 +17,8 @@ A imagem promocional está em `public/assets/taua-promotional.png` e pode ser ba
 
 ## Verificação
 
+As otimizações de imagens, rotas, partículas e HUD estão documentadas com medições reproduzíveis em [PERF.md](PERF.md).
+
 ```sh
 npm test
 npm run build

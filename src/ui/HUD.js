@@ -24,10 +24,23 @@ export class HUD {
   }
 
   update(player, wave, survivors, reception, navigation) {
-    this.escortText.textContent = survivors.filter(s => s.state === 'following' && !s.dead).length;
+    let escorts = 0;
+    for (const survivor of survivors) if (survivor.state === 'following' && !survivor.dead) escorts++;
+    if (escorts !== this._lastEscorts) {
+      this.escortText.textContent = escorts;
+      this._lastEscorts = escorts;
+    }
     const dx = reception.x - player.position.x, dz = reception.z - player.position.z;
-    this.refugeText.textContent = navigation.inSafeZone(player.position) ? 'Você está no abrigo' : `Abrigo · ${Math.round(Math.hypot(dx, dz))} m`;
-    this.refugeArrow.style.transform = `rotate(${Math.atan2(dx, -dz)}rad)`;
+    const refuge = navigation.inSafeZone(player.position) ? 'Você está no abrigo' : `Abrigo · ${Math.round(Math.hypot(dx, dz))} m`;
+    if (refuge !== this._lastRefuge) {
+      this.refugeText.textContent = refuge;
+      this._lastRefuge = refuge;
+    }
+    const angle = Math.round(Math.atan2(dx, -dz) * 100) / 100;
+    if (angle !== this._lastAngle) {
+      this.refugeArrow.style.transform = `rotate(${angle}rad)`;
+      this._lastAngle = angle;
+    }
     // Atualizar vida somente quando mudar
     const roundedHp = Math.ceil(player.hp);
     if (roundedHp !== this._lastHp || player.maxHp !== this._lastMaxHp) {

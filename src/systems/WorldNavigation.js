@@ -58,6 +58,11 @@ export class WorldNavigation {
       for (let i = 0; i < grid.length; i++) grid[i] = this.isFree(this.point(i), zombie, 1.25) ? 1 : 0;
       return grid;
     });
+    // Arena obstacles are immutable: validate each grid edge once, rather than
+    // intersecting every wall again for every A* expansion and every zombie.
+    this.edges = [false, true].map(zombie => Array.from(
+      { length: this.width ** 2 }, (_, i) => this.buildNeighbors(i, zombie)
+    ));
     // Only spawn in the component reachable from the central starting area.
     this.reachable = [false, true].map(zombie => {
       const grid = this.grids[Number(zombie)];
@@ -111,6 +116,9 @@ export class WorldNavigation {
     return clamp(p.z) * this.width + clamp(p.x);
   }
   neighbors(i, zombie) {
+    return this.edges[Number(zombie)][i];
+  }
+  buildNeighbors(i, zombie) {
     const result = [], grid = this.grids[Number(zombie)], x = i % this.width, z = Math.floor(i / this.width);
     for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
       const nx = x + dx, nz = z + dz;
