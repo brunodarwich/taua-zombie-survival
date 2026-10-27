@@ -6,16 +6,16 @@ import { sounds } from '../audio.js';
 export class Zombie {
   constructor(scene, position, waveMultiplier = 1) {
     this.scene = scene;
-    this.hp = 60 * waveMultiplier;
+    this.hp = 80 * waveMultiplier;
     this.maxHp = this.hp;
-    this.speed = (5 + Math.random() * 2.5) * Math.min(1.6, 1 + (waveMultiplier - 1) * 0.1);
+    this.speed = (5 + Math.random() * 2.2) * Math.min(1.5, 1 + (waveMultiplier - 1) * 0.08);
     this.damage = 15;
     this.attackCooldown = 0.8;
     this.lastAttack = 0;
     this.dead = false;
 
     this.position = position.clone();
-    this.scale = 2.3;
+    this.scale = 3.6; // Aumentado significativamente para ser bem visível
 
     const texture = textureCache.load(ASSETS.zombie);
     const material = new THREE.SpriteMaterial({
@@ -27,11 +27,12 @@ export class Zombie {
     this.sprite.scale.set(this.scale, this.scale, 1);
     this.sprite.position.y = this.scale * 0.48;
 
-    const shadowGeo = new THREE.CircleGeometry(0.7, 16);
+    // Sombra Paper Mario estilizada nítida
+    const shadowGeo = new THREE.CircleGeometry(1.0, 20);
     const shadowMat = new THREE.MeshBasicMaterial({
-      color: 0x000000,
+      color: 0x070b14,
       transparent: true,
-      opacity: 0.35
+      opacity: 0.5
     });
     this.shadow = new THREE.Mesh(shadowGeo, shadowMat);
     this.shadow.rotation.x = -Math.PI / 2;
@@ -49,13 +50,15 @@ export class Zombie {
     this.hp -= amount;
     sounds.playZombieHit();
 
-    // Efeito de impacto
-    this.sprite.material.color.setRGB(1, 0.2, 0.2);
+    // Efeito Paper Mario de Squash & Stretch no impacto
+    this.sprite.scale.set(this.scale * 1.25, this.scale * 0.8, 1);
+    this.sprite.material.color.setRGB(1, 0.1, 0.1);
     setTimeout(() => {
-      if (this.sprite.material) {
+      if (this.sprite && this.sprite.material) {
+        this.sprite.scale.set(this.scale, this.scale, 1);
         this.sprite.material.color.setRGB(1, 1, 1);
       }
-    }, 90);
+    }, 110);
 
     if (this.hp <= 0 && !this.dead) {
       this.dead = true;
@@ -68,7 +71,6 @@ export class Zombie {
   update(delta, player, survivors, currentTime) {
     if (this.dead) return;
 
-    // Achar o alvo mais próximo (jogador ou sobrevivente sem resgate)
     let target = player;
     let minDistSq = this.position.distanceToSquared(player.position);
 
@@ -82,18 +84,19 @@ export class Zombie {
       }
     }
 
-    // Perseguir alvo
     const dir = new THREE.Vector3().subVectors(target.position, this.position);
     dir.y = 0;
     const dist = dir.length();
 
-    if (dist > 1.2) {
+    if (dist > 1.4) {
       dir.normalize();
       this.position.addScaledVector(dir, this.speed * delta);
       this.group.position.copy(this.position);
 
-      // Animação de mancar do zumbi
-      this.sprite.position.y = (this.scale * 0.48) + Math.abs(Math.sin(Date.now() * 0.008)) * 0.15;
+      // Balanço Paper Mario (passo firme)
+      const walkCycle = Math.sin(Date.now() * 0.012);
+      this.sprite.position.y = (this.scale * 0.48) + Math.abs(walkCycle) * 0.22;
+      this.sprite.material.rotation = walkCycle * 0.08;
 
       if (dir.x < -0.1) {
         this.sprite.scale.x = -Math.abs(this.scale);
@@ -101,7 +104,6 @@ export class Zombie {
         this.sprite.scale.x = Math.abs(this.scale);
       }
     } else {
-      // Atacar alvo se estiver próximo
       if (currentTime - this.lastAttack >= this.attackCooldown) {
         this.lastAttack = currentTime;
         if (target === player) {

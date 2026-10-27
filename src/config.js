@@ -2,7 +2,7 @@ export const ASSETS = {
   // Tier 1: Sem equipamento (1 a 20)
   unarmed: Array.from({ length: 20 }, (_, i) => `assets/sem equipamento (${i + 1}).png`),
 
-  // Tier 2: Player com equipamento básico (arquivos existentes)
+  // Tier 2: Player com equipamento básico
   player: [
     'assets/player (2).png',
     'assets/player (10).png',
@@ -17,7 +17,7 @@ export const ASSETS = {
   // Sobreviventes resgatados com capacete (1 a 10)
   helmet: Array.from({ length: 10 }, (_, i) => `assets/capacete (${i + 1}).png`),
 
-  // Drops de equipamento coletáveis no chão
+  // Drops de equipamento
   pickups: [
     'assets/equipamento (1).png',
     'assets/equipamento (2).png'
@@ -28,34 +28,38 @@ export const ASSETS = {
 };
 
 export const CONFIG = {
-  WORLD_SIZE: 90,
+  WORLD_SIZE: 110,
   PLAYER_SPEED: 14,
+  // Escalas maiores para personagens bem visíveis
   TIER_PROPERTIES: {
     1: {
-      scale: 2.2,
-      fireRate: 0.28,
-      bulletSpeed: 32,
-      bulletDamage: 35,
+      scale: 3.8,            // Aumentado consideravelmente
+      fireRate: 0.25,
+      bulletSpeed: 38,
+      bulletDamage: 40,
       bulletSpread: 1,
-      bulletColor: 0xffe600,
+      bulletColor: 0xffea00,
+      glowColor: 0xffaa00,
       name: 'Sem Equipamento'
     },
     2: {
-      scale: 2.8,
-      fireRate: 0.16,
-      bulletSpeed: 38,
-      bulletDamage: 60,
+      scale: 4.6,            // Grande
+      fireRate: 0.15,
+      bulletSpeed: 44,
+      bulletDamage: 75,
       bulletSpread: 2,
       bulletColor: 0x00f0ff,
+      glowColor: 0x0088ff,
       name: 'Soldado Equipado'
     },
     3: {
-      scale: 3.5,
-      fireRate: 0.10,
-      bulletSpeed: 45,
-      bulletDamage: 110,
+      scale: 5.6,            // Gigante / Supremo
+      fireRate: 0.09,
+      bulletSpeed: 52,
+      bulletDamage: 135,
       bulletSpread: 3,
       bulletColor: 0xff0055,
+      glowColor: 0xff5500,
       name: 'PLAYER TOP (SUPREMO)'
     }
   }

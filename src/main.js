@@ -4,14 +4,19 @@ import { Player } from './entities/Player.js';
 import { Bullet } from './entities/Bullet.js';
 import { Spawner } from './systems/Spawner.js';
 import { CollisionSystem } from './systems/Collision.js';
+import { ParticleSystem } from './systems/ParticleSystem.js';
+import { DamageTextManager } from './systems/DamageTextManager.js';
 import { CharacterSelect } from './ui/CharacterSelect.js';
 import { HUD } from './ui/HUD.js';
+import { MobileControls } from './ui/MobileControls.js';
 import { sounds } from './audio.js';
 
 let scene, camera, renderer;
 let player = null;
 let spawner = null;
 let collisionSystem = null;
+let particleSystem = null;
+let damageTextManager = null;
 let hud = null;
 let groundPlane = null;
 let raycaster = new THREE.Raycaster();
@@ -23,52 +28,62 @@ const inputState = {
   backward: false,
   left: false,
   right: false,
-  isMouseDown: false
+  isMouseDown: false,
+  aimDirection: null
 };
 
 let lastTime = performance.now();
 let gameRunning = false;
 
 function init() {
-  // 1. Cena Three.js
+  // 1. Cena Three.js com atmosfera Paper Mario
   scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x0e1118);
-  scene.fog = new THREE.FogExp2(0x0e1118, 0.022);
+  scene.background = new THREE.Color(0x0a0e1a);
+  scene.fog = new THREE.FogExp2(0x0a0e1a, 0.016);
 
-  // 2. Câmera Isométrica
+  // 2. Câmera Isométrica mais próxima para personagens maiores
+  const isMobile = window.innerWidth <= 768;
   const aspect = window.innerWidth / window.innerHeight;
   camera = new THREE.PerspectiveCamera(45, aspect, 0.1, 200);
-  camera.position.set(0, 32, 28);
+  const camHeight = isMobile ? 22 : 24;
+  const camDist = isMobile ? 20 : 22;
+  camera.position.set(0, camHeight, camDist);
   camera.lookAt(0, 0, 0);
 
   // 3. Renderizador WebGL
   renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-  renderer.shadowMap.enabled = true;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.15;
   document.getElementById('canvas-container').appendChild(renderer.domElement);
 
-  // 4. Iluminação
-  const ambientLight = new THREE.AmbientLight(0xffffff, 0.85);
+  // 4. Iluminação Estilo Paper Mario (Luz quente suave + Key light + Rim light)
+  const ambientLight = new THREE.AmbientLight(0xdde6ff, 1.1);
   scene.add(ambientLight);
 
-  const dirLight = new THREE.DirectionalLight(0xffeedd, 1.2);
-  dirLight.position.set(20, 40, 20);
-  scene.add(dirLight);
+  // Luz do Sol / Palco
+  const sunLight = new THREE.DirectionalLight(0xfff5e6, 1.4);
+  sunLight.position.set(25, 45, 25);
+  scene.add(sunLight);
 
-  const redAtmosphere = new THREE.PointLight(0xff3344, 0.5, 40);
-  redAtmosphere.position.set(0, 5, 0);
-  scene.add(redAtmosphere);
+  // Rim Light (Destaque de contorno traseiro estilo Paper Mario)
+  const rimLight = new THREE.DirectionalLight(0x00f0ff, 0.85);
+  rimLight.position.set(-25, 20, -25);
+  scene.add(rimLight);
 
-  // 5. Chão / Arena de Batalha Estilizada
+  // 5. Chão / Arena Paper Mario com Textura Quadriculada e Borda de Papel
   createGround();
 
   // 6. Sistemas
+  particleSystem = new ParticleSystem(scene);
+  damageTextManager = new DamageTextManager(scene);
   spawner = new Spawner(scene);
-  collisionSystem = new CollisionSystem(scene);
+  collisionSystem = new CollisionSystem(scene, particleSystem, damageTextManager);
   hud = new HUD();
+  new MobileControls(inputState);
 
-  // 7. Eventos de Janela e Controles
+  // 7. Eventos
   setupEventListeners();
 
   // 8. Tela de Seleção de Personagem Inicial
@@ -82,27 +97,26 @@ function init() {
 
 function createGround() {
   const size = CONFIG.WORLD_SIZE;
-  // Malha de colisão invisível para o Raycaster
   const groundGeo = new THREE.PlaneGeometry(size, size);
   const groundMat = new THREE.MeshStandardMaterial({
-    color: 0x161b26,
-    roughness: 0.85,
-    metalness: 0.15
+    color: 0x141a29,
+    roughness: 0.8,
+    metalness: 0.1
   });
   groundPlane = new THREE.Mesh(groundGeo, groundMat);
   groundPlane.rotation.x = -Math.PI / 2;
   scene.add(groundPlane);
 
-  // Grade tática
-  const gridHelper = new THREE.GridHelper(size, 45, 0x00f0ff, 0x1f293d);
+  // Grade Paper Mario
+  const gridHelper = new THREE.GridHelper(size, 40, 0x00e1ff, 0x1c253b);
   gridHelper.position.y = 0.02;
   scene.add(gridHelper);
 
-  // Paredes limítrofes iluminadas
-  const wallMat = new THREE.MeshBasicMaterial({ color: 0x00f0ff, transparent: true, opacity: 0.25 });
+  // Paredes de papel destacadas (Bordas cartoon)
+  const wallMat = new THREE.MeshBasicMaterial({ color: 0x00f0ff, transparent: true, opacity: 0.35 });
   const halfSize = size / 2;
-  const wallThickness = 0.4;
-  const wallHeight = 2.5;
+  const wallThickness = 0.5;
+  const wallHeight = 3.0;
 
   const walls = [
     { pos: [0, wallHeight / 2, -halfSize], size: [size, wallHeight, wallThickness] },
@@ -123,6 +137,12 @@ function startGame(skinUrl) {
   player = new Player(scene, skinUrl);
   gameRunning = true;
   document.getElementById('hud-container').classList.remove('hidden');
+
+  // Se for celular/touch, ativa o container de controles touch
+  const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+  if (isTouch) {
+    document.getElementById('mobile-controls').classList.remove('hidden');
+  }
 }
 
 function setupEventListeners() {
@@ -157,12 +177,34 @@ function setupEventListeners() {
     if (e.button === 0) inputState.isMouseDown = false;
   });
 
+  // Touch para mirar ao tocar na tela (se não for no joystick)
+  window.addEventListener('touchstart', (e) => {
+    if (e.touches.length > 0) {
+      const t = e.touches[0];
+      if (t.clientX > window.innerWidth * 0.45) { // Lado direito da tela = mira/tiro
+        mouse.x = (t.clientX / window.innerWidth) * 2 - 1;
+        mouse.y = -(t.clientY / window.innerHeight) * 2 + 1;
+      }
+    }
+  }, { passive: true });
+
+  window.addEventListener('touchmove', (e) => {
+    if (e.touches.length > 0) {
+      const t = e.touches[0];
+      if (t.clientX > window.innerWidth * 0.45) {
+        mouse.x = (t.clientX / window.innerWidth) * 2 - 1;
+        mouse.y = -(t.clientY / window.innerHeight) * 2 + 1;
+      }
+    }
+  }, { passive: true });
+
   document.getElementById('restart-btn').addEventListener('click', () => {
     location.reload();
   });
 }
 
 function onWindowResize() {
+  const isMobile = window.innerWidth <= 768;
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
@@ -175,16 +217,15 @@ function handleShooting(currentTime) {
   const props = CONFIG.TIER_PROPERTIES[player.tier];
   sounds.playShoot(player.tier);
 
-  // Mecânica de múltiplos disparos / leque para Tiers mais altos
   const spreadCount = props.bulletSpread;
   const baseAngle = Math.atan2(player.aimDirection.z, player.aimDirection.x);
 
   for (let i = 0; i < spreadCount; i++) {
     let offsetAngle = 0;
     if (spreadCount === 2) {
-      offsetAngle = (i === 0 ? -0.08 : 0.08);
+      offsetAngle = (i === 0 ? -0.1 : 0.1);
     } else if (spreadCount === 3) {
-      offsetAngle = (i - 1) * 0.12;
+      offsetAngle = (i - 1) * 0.14;
     }
 
     const angle = baseAngle + offsetAngle;
@@ -202,54 +243,56 @@ function animate(currentTimeMs) {
   lastTime = currentTimeMs;
 
   if (gameRunning && player) {
-    // 1. Atualizar Raycaster do Mouse
     raycaster.setFromCamera(mouse, camera);
 
-    // 2. Atualizar Jogador
     player.update(delta, inputState, raycaster, groundPlane, camera);
 
-    // 3. Suavizar Câmera acompanhando o Jogador
-    camera.position.x = THREE.MathUtils.lerp(camera.position.x, player.position.x, 0.08);
-    camera.position.z = THREE.MathUtils.lerp(camera.position.z, player.position.z + 28, 0.08);
+    // Câmera dinâmica mais próxima acompanhando com suavização
+    const isMobile = window.innerWidth <= 768;
+    const targetZ = player.position.z + (isMobile ? 20 : 22);
+    camera.position.x = THREE.MathUtils.lerp(camera.position.x, player.position.x, 0.1);
+    camera.position.z = THREE.MathUtils.lerp(camera.position.z, targetZ, 0.1);
 
-    // 4. Disparos
     handleShooting(currentTime);
 
-    // 5. Atualizar Balas
+    // Balas com trilha FX
     for (let i = bullets.length - 1; i >= 0; i--) {
       const b = bullets[i];
-      b.update(delta);
+      b.update(delta, particleSystem);
       if (b.dead) bullets.splice(i, 1);
     }
 
-    // 6. Spawner & Zumbis & Sobreviventes & Equipamentos
+    // Spawner
     spawner.update(delta, player, currentTime);
 
-    // Atualizar zumbis
+    // Zumbis
     for (let i = spawner.zombies.length - 1; i >= 0; i--) {
       const z = spawner.zombies[i];
       z.update(delta, player, spawner.survivors, currentTime);
     }
 
-    // Atualizar sobreviventes
+    // Sobreviventes
     for (let i = spawner.survivors.length - 1; i >= 0; i--) {
       const s = spawner.survivors[i];
       s.update(delta, player.position);
     }
 
-    // Atualizar pickups
+    // Pickups
     for (let i = spawner.pickups.length - 1; i >= 0; i--) {
       const p = spawner.pickups[i];
       p.update(delta);
     }
 
-    // 7. Colisões
+    // Partículas e Números de Dano
+    particleSystem.update(delta);
+    damageTextManager.update(delta);
+
+    // Colisões
     collisionSystem.checkAll(player, bullets, spawner);
 
-    // 8. Atualizar HUD
+    // HUD
     hud.update(player, spawner.wave);
 
-    // 9. Checar Game Over
     if (player.hp <= 0) {
       gameOver();
     }
@@ -261,6 +304,7 @@ function animate(currentTimeMs) {
 function gameOver() {
   gameRunning = false;
   document.getElementById('hud-container').classList.add('hidden');
+  document.getElementById('mobile-controls').classList.add('hidden');
   document.getElementById('game-over-screen').classList.remove('hidden');
   document.getElementById('final-score').textContent = player.score;
   document.getElementById('final-rescued').textContent = player.rescuedCount;

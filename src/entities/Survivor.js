@@ -7,13 +7,12 @@ export class Survivor {
   constructor(scene, position) {
     this.scene = scene;
     this.position = position.clone();
-    this.hp = 80;
+    this.hp = 100;
     this.dead = false;
     this.rescued = false;
-    this.scale = 2.1;
-    this.followSpeed = 10;
+    this.scale = 3.4; // Aumentado para visibilidade nítida
+    this.followSpeed = 11;
 
-    // Começa sem equipamento
     const randUnarmed = ASSETS.unarmed[Math.floor(Math.random() * ASSETS.unarmed.length)];
     this.unarmedUrl = randUnarmed;
 
@@ -27,31 +26,36 @@ export class Survivor {
     this.sprite.scale.set(this.scale, this.scale, 1);
     this.sprite.position.y = this.scale * 0.48;
 
-    // Ícone de "SOCORRO!" flutuante
+    // Balão de socorro Paper Mario
     this.helpCanvas = document.createElement('canvas');
-    this.helpCanvas.width = 128;
-    this.helpCanvas.height = 64;
+    this.helpCanvas.width = 160;
+    this.helpCanvas.height = 70;
     const ctx = this.helpCanvas.getContext('2d');
-    ctx.fillStyle = '#ff3366';
-    ctx.roundRect(4, 4, 120, 56, 12);
+    ctx.lineWidth = 6;
+    ctx.strokeStyle = '#000000';
+    ctx.fillStyle = '#ff1155';
+    ctx.beginPath();
+    ctx.roundRect(6, 6, 148, 58, 16);
+    ctx.stroke();
     ctx.fill();
+
     ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 24px Arial';
+    ctx.font = '900 24px Impact, "Arial Black", sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('SOCORRO!', 64, 32);
+    ctx.fillText('SOCORRO!', 80, 36);
 
     const helpTex = new THREE.CanvasTexture(this.helpCanvas);
-    const helpMat = new THREE.SpriteMaterial({ map: helpTex, transparent: true });
+    const helpMat = new THREE.SpriteMaterial({ map: helpTex, transparent: true, depthTest: false });
     this.helpSprite = new THREE.Sprite(helpMat);
-    this.helpSprite.scale.set(1.8, 0.9, 1);
-    this.helpSprite.position.y = this.scale + 0.6;
+    this.helpSprite.scale.set(2.4, 1.1, 1);
+    this.helpSprite.position.y = this.scale + 0.9;
 
-    const shadowGeo = new THREE.CircleGeometry(0.7, 16);
+    const shadowGeo = new THREE.CircleGeometry(0.9, 20);
     const shadowMat = new THREE.MeshBasicMaterial({
-      color: 0x000000,
+      color: 0x070b14,
       transparent: true,
-      opacity: 0.3
+      opacity: 0.45
     });
     this.shadow = new THREE.Mesh(shadowGeo, shadowMat);
     this.shadow.rotation.x = -Math.PI / 2;
@@ -76,17 +80,28 @@ export class Survivor {
     this.sprite.material.map = helmetTex;
     this.sprite.material.needsUpdate = true;
 
-    // Remove aviso de socorro e substitui por "SALVO!"
+    // Pop visual
+    this.sprite.scale.set(this.scale * 1.3, this.scale * 1.3, 1);
+    setTimeout(() => {
+      if (this.sprite) this.sprite.scale.set(this.scale, this.scale, 1);
+    }, 200);
+
+    // Balão SALVO
     const ctx = this.helpCanvas.getContext('2d');
-    ctx.clearRect(0, 0, 128, 64);
-    ctx.fillStyle = '#00ff88';
-    ctx.roundRect(4, 4, 120, 56, 12);
+    ctx.clearRect(0, 0, 160, 70);
+    ctx.lineWidth = 6;
+    ctx.strokeStyle = '#000000';
+    ctx.fillStyle = '#00ff66';
+    ctx.beginPath();
+    ctx.roundRect(6, 6, 148, 58, 16);
+    ctx.stroke();
     ctx.fill();
+
     ctx.fillStyle = '#052210';
-    ctx.font = 'bold 26px Arial';
+    ctx.font = '900 26px Impact, "Arial Black", sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('SALVO!', 64, 32);
+    ctx.fillText('SALVO!', 80, 36);
     this.helpSprite.material.map.needsUpdate = true;
 
     setTimeout(() => {
@@ -103,7 +118,7 @@ export class Survivor {
     this.hp -= amount;
     this.sprite.material.color.setRGB(1, 0.2, 0.2);
     setTimeout(() => {
-      if (this.sprite.material) {
+      if (this.sprite && this.sprite.material) {
         this.sprite.material.color.setRGB(1, 1, 1);
       }
     }, 100);
@@ -119,26 +134,30 @@ export class Survivor {
     if (this.dead) return;
 
     if (this.rescued) {
-      // Segue o jogador com uma distância segura de apoio
       const dir = new THREE.Vector3().subVectors(playerPosition, this.position);
       dir.y = 0;
       const dist = dir.length();
 
-      if (dist > 3.5) {
+      if (dist > 4.0) {
         dir.normalize();
         this.position.addScaledVector(dir, this.followSpeed * delta);
         this.group.position.copy(this.position);
+
+        const walkCycle = Math.sin(Date.now() * 0.015);
+        this.sprite.position.y = (this.scale * 0.48) + Math.abs(walkCycle) * 0.2;
+        this.sprite.material.rotation = walkCycle * 0.06;
 
         if (dir.x < -0.1) {
           this.sprite.scale.x = -Math.abs(this.scale);
         } else if (dir.x > 0.1) {
           this.sprite.scale.x = Math.abs(this.scale);
         }
+      } else {
+        this.sprite.material.rotation = 0;
       }
     } else {
-      // Flutua o ícone de socorro
       if (this.helpSprite) {
-        this.helpSprite.position.y = this.scale + 0.6 + Math.sin(Date.now() * 0.006) * 0.2;
+        this.helpSprite.position.y = this.scale + 0.9 + Math.sin(Date.now() * 0.007) * 0.25;
       }
     }
   }
