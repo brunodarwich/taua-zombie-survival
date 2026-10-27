@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Taua: Zombie Survival 3D</title>
+    <script type="module" crossorigin src="./assets/index-C5m9OT9M.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-Bz-SOnYM.css">
+  </head>
+  <body>
+    <!-- Canvas 3D do Three.js -->
+    <div id="canvas-container"></div>
+
+    <!-- Tela 1: Seleção de Personagem Inicial (Sem Equipamento) -->
+    <div id="char-select-screen" class="ui-screen">
+      <h1 class="header-title">Sobrevivência Zumbi</h1>
+      <p class="subtitle">Escolha seu personagem inicial sem equipamento para entrar na arena:</p>
+      <div id="char-grid" class="char-grid"></div>
+    </div>
+
+    <!-- Tela 2: HUD durante o Jogo -->
+    <div id="hud-container" class="ui-screen hidden">
+      <div class="hud-left">
+        <div class="avatar-hud-box">
+          <img id="hud-avatar" src="" alt="Player Avatar" />
+        </div>
+        <div class="hud-info">
+          <div id="tier-badge" class="tier-tag tier-1">Sem Equipamento</div>
+          <div class="hp-bar-container">
+            <div id="hp-fill" class="hp-bar-fill"></div>
+          </div>
+          <div id="hp-text" class="hp-text">100 / 100</div>
+        </div>
+      </div>
+
+      <div class="hud-right">
+        <div class="stat-pill">SOBREVIVENTES RESGATADOS: <span id="rescue-val">0</span></div>
+        <div class="stat-pill">PONTUAÇÃO: <span id="score-val">0</span></div>
+        <div class="stat-pill">HORDA: <span id="wave-val">1</span></div>
+      </div>
+    </div>
+
+    <!-- Banner Central de Evolução -->
+    <div id="evolution-banner" class="hidden"></div>
+
+    <!-- Tela 3: Game Over -->
+    <div id="game-over-screen" class="ui-screen hidden">
+      <h1 class="game-over-title">VOCÊ FOI INFECTADO!</h1>
+      <div class="game-over-stats">
+        <p>Pontuação Total: <strong id="final-score">0</strong></p>
+        <p>Sobreviventes Salvos: <strong id="final-rescued">0</strong></p>
+      </div>
+      <button id="restart-btn" class="btn-primary">JOGAR NOVAMENTE</button>
+    </div>
+
+  </body>
+</html>
