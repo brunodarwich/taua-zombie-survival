@@ -1,7 +1,7 @@
 export class MobileControls {
   constructor(inputState) {
     this.inputState = inputState;
-    this.isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    this.isTouchDevice = navigator.maxTouchPoints > 0;
     this.container = document.getElementById('mobile-controls');
 
     if (!this.isTouchDevice) {
@@ -9,7 +9,6 @@ export class MobileControls {
       return;
     }
 
-    if (this.container) this.container.classList.remove('hidden');
     this.initJoystick();
     this.initFireButton();
   }

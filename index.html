@@ -10,8 +10,28 @@
     <!-- Canvas 3D do Three.js -->
     <div id="canvas-container"></div>
 
-    <!-- Tela 1: Seleção de Personagem Inicial (Sem Equipamento) -->
-    <div id="char-select-screen" class="ui-screen">
+    <main id="start-screen" class="ui-screen">
+      <img class="start-art" src="./assets/taua-promotional.png" alt="Um herói equipado protege sobreviventes de uma horda de zumbis enquanto os conduz ao abrigo iluminado." />
+      <div class="start-shade"></div>
+      <div class="start-top"><span class="brand-mark">T<span> / </span>01</span><span class="operation-tag"><i></i> OPERAÇÃO RESGATE</span></div>
+      <section class="start-copy">
+        <p class="eyebrow">A CIDADE CAIU. A ESPERANÇA, NÃO.</p>
+        <h1 class="game-logo">TAUA<span>ZOMBIE SURVIVAL</span></h1>
+        <p class="start-description">Enfrente a horda. Encontre sobreviventes.<br />Leve todos para casa.</p>
+        <button id="play-btn" class="start-play">JOGAR <span aria-hidden="true">↗</span></button>
+        <div class="mission-note"><span aria-hidden="true">◇</span> Sua missão termina quando eles chegam ao abrigo.</div>
+      </section>
+      <div class="start-bottom">
+        <div class="control-tip"><kbd>W A S D</kbd><span>MOVER<span class="touch-tip"> · Joystick no celular</span></span></div>
+        <div class="control-tip"><kbd>CLIQUE / ESPAÇO</kbd><span>ATIRAR<span class="touch-tip"> · Botão Fogo</span></span></div>
+        <div class="control-tip"><kbd>SCROLL / + −</kbd><span>ZOOM</span></div>
+        <a class="art-download" href="./assets/taua-promotional.png" download="taua-promocional.png">BAIXAR ARTE <span aria-hidden="true">↓</span></a>
+      </div>
+    </main>
+
+    <!-- Seleção de personagem -->
+    <div id="char-select-screen" class="ui-screen hidden">
+      <button id="back-btn" class="btn-back">← Voltar</button>
       <h1 class="header-title">Sobrevivência Zumbi</h1>
       <p class="subtitle">Escolha seu personagem inicial sem equipamento para entrar na arena:</p>
       <div id="char-grid" class="char-grid"></div>
@@ -33,11 +53,17 @@
       </div>
 
       <div class="hud-right">
-        <div class="stat-pill">RESGATES: <span id="rescue-val">0</span></div>
+        <div class="stat-pill">SALVOS: <span id="rescue-val">0</span></div>
+        <div class="stat-pill">EM ESCOLTA: <span id="escort-val">0</span></div>
         <div class="stat-pill">SCORE: <span id="score-val">0</span></div>
         <div class="stat-pill">HORDA: <span id="wave-val">1</span></div>
       </div>
+      <div class="refuge-guide"><span id="refuge-arrow" aria-hidden="true">↑</span><span id="refuge-distance">Abrigo</span><small>Escolte até o coordenador</small></div>
+      <div id="zoom-controls" aria-label="Zoom da câmera">
+        <button id="zoom-out" aria-label="Afastar câmera">−</button><span id="zoom-value">100%</span><button id="zoom-in" aria-label="Aproximar câmera">+</button><button id="zoom-reset" aria-label="Restaurar câmera">Restaurar</button>
+      </div>
     </div>
+    <div id="rescue-message" class="hidden" role="status" aria-live="polite"></div>
 
     <!-- Banner Central de Evolução -->
     <div id="evolution-banner" class="hidden"></div>

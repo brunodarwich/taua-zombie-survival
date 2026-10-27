@@ -24,6 +24,7 @@ export class Bullet {
     this.scene = scene;
     this.position = origin.clone();
     this.position.y = 1.3;
+    this.previousPosition = this.position.clone();
     this.direction = direction.clone().normalize();
     this.speed = properties.bulletSpeed;
     this.damage = properties.bulletDamage;
@@ -51,6 +52,7 @@ export class Bullet {
   update(delta, particleSystem) {
     if (this.dead) return;
 
+    this.previousPosition.copy(this.position);
     this.position.addScaledVector(this.direction, this.speed * delta);
     this.group.position.copy(this.position);
 

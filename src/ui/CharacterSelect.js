@@ -11,7 +11,8 @@ export class CharacterSelect {
   render() {
     this.grid.innerHTML = '';
     ASSETS.unarmed.forEach((assetPath, index) => {
-      const card = document.createElement('div');
+      const card = document.createElement('button');
+      card.type = 'button';
       card.className = 'char-card';
       card.innerHTML = `
         <div class="char-img-wrapper">

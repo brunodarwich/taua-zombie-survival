@@ -124,7 +124,7 @@ export class Player {
     return this.hp <= 0;
   }
 
-  update(delta, inputState, raycaster, groundPlane, camera) {
+  update(delta, inputState, raycaster, groundPlane, camera, navigation) {
     const move = this._moveVector.set(0, 0, 0);
     if (inputState.forward) move.z -= 1;
     if (inputState.backward) move.z += 1;
@@ -133,7 +133,7 @@ export class Player {
 
     if (move.lengthSq() > 0) {
       move.normalize();
-      this.position.addScaledVector(move, CONFIG.PLAYER_SPEED * delta);
+      navigation.move(this.position, move.x * CONFIG.PLAYER_SPEED * delta, move.z * CONFIG.PLAYER_SPEED * delta);
 
       const limit = CONFIG.WORLD_SIZE / 2 - 2;
       this.position.x = Math.max(-limit, Math.min(limit, this.position.x));

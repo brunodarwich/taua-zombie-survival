@@ -1,102 +1,75 @@
 import { Pickup } from '../entities/Pickup.js';
 
+// Swept circle hit in the ground plane. Return the first impact along the frame.
+export function segmentCircleHit(a, b, center, radius) {
+  const dx = b.x - a.x, dz = b.z - a.z;
+  const ox = a.x - center.x, oz = a.z - center.z;
+  const c = ox * ox + oz * oz - radius * radius;
+  if (c <= 0) return 0;
+  const length = dx * dx + dz * dz;
+  if (length < 1e-9) return null;
+  const projection = ox * dx + oz * dz;
+  const discriminant = projection * projection - length * c;
+  if (discriminant < 0) return null;
+  const t = (-projection - Math.sqrt(discriminant)) / length;
+  return t >= 0 && t <= 1 ? t : null;
+}
+
 export class CollisionSystem {
-  constructor(scene, particleSystem, damageTextManager) {
+  constructor(scene, particleSystem, damageTextManager, navigation) {
     this.scene = scene;
     this.particles = particleSystem;
     this.damageText = damageTextManager;
+    this.navigation = navigation;
   }
 
   checkAll(player, bullets, spawner) {
-    // 1. Projéteis vs Zumbis
-    for (let bIndex = bullets.length - 1; bIndex >= 0; bIndex--) {
-      const bullet = bullets[bIndex];
+    for (let bi = bullets.length - 1; bi >= 0; bi--) {
+      const bullet = bullets[bi];
       if (bullet.dead) continue;
-
-      for (let zIndex = spawner.zombies.length - 1; zIndex >= 0; zIndex--) {
-        const zombie = spawner.zombies[zIndex];
+      const wallHit = this.navigation.firstHit(bullet.previousPosition, bullet.position, false, 0.3);
+      let nearest = wallHit ?? Infinity, targetIndex = -1;
+      for (let zi = 0; zi < spawner.zombies.length; zi++) {
+        const zombie = spawner.zombies[zi];
         if (zombie.dead) continue;
-
-        const distSq = bullet.position.distanceToSquared(zombie.position);
-        if (distSq < 3.2) { // Raio ajustado para escalas maiores
-          // Dano com chance de acerto crítico
-          const isCrit = Math.random() < 0.25;
-          const finalDamage = isCrit ? bullet.damage * 1.5 : bullet.damage;
-
-          // 1. Gerar FX de Faíscas/Impacto
-          if (this.particles) {
-            this.particles.spawnHitSparks(bullet.position, bullet.color, 14);
-          }
-
-          // 2. Gerar Número de Dano Flutuante estilo Paper Mario
-          if (this.damageText) {
-            this.damageText.spawnDamage(zombie.position, finalDamage, isCrit);
-          }
-
-          const killed = zombie.takeDamage(finalDamage);
-          bullet.destroy();
-          bullets.splice(bIndex, 1);
-
-          if (killed) {
-            player.score += 100;
-            // Explosão de eliminação
-            if (this.particles) {
-              this.particles.spawnBurst(zombie.position, 0xff0044, 24);
+        const hit = segmentCircleHit(bullet.previousPosition, bullet.position, zombie.position, 1.65);
+        if (hit !== null && hit < nearest) { nearest = hit; targetIndex = zi; }
+      }
+      if (nearest === Infinity) continue;
+      const impact = bullet.previousPosition.clone().lerp(bullet.position, nearest);
+      this.particles?.spawnHitSparks(impact, bullet.color, 10);
+      bullet.destroy(); bullets.splice(bi, 1);
+      if (targetIndex >= 0) {
+        const zombie = spawner.zombies[targetIndex];
+        const critical = Math.random() < 0.25;
+        const damage = bullet.damage * (critical ? 1.5 : 1);
+        this.damageText?.spawnDamage(zombie.position, damage, critical);
+        if (zombie.takeDamage(damage)) {
+          player.score += 100;
+          this.particles?.spawnBurst(zombie.position, 0xff0044, 24);
+          if (Math.random() < 0.22) {
+            const point = this.navigation.dropPoint(zombie.position);
+            if (point) {
+              const position = zombie.position.clone().set(point.x, 0, point.z);
+              spawner.pickups.push(new Pickup(this.scene, position));
             }
-
-            // Chance de drop de equipamento (20%)
-            if (Math.random() < 0.22) {
-              const drop = new Pickup(this.scene, zombie.position);
-              spawner.pickups.push(drop);
-            }
-            zombie.destroy();
-            spawner.zombies.splice(zIndex, 1);
           }
-          break;
+          zombie.destroy(); spawner.zombies.splice(targetIndex, 1);
         }
       }
     }
 
-    // 2. Jogador vs Sobreviventes (Resgate)
-    for (const survivor of spawner.survivors) {
-      if (!survivor.rescued && !survivor.dead) {
-        const dist = player.position.distanceTo(survivor.position);
-        if (dist < 3.8) {
-          survivor.rescue();
-          player.rescuedCount++;
-          player.score += 350;
-
-          if (this.particles) {
-            this.particles.spawnBurst(survivor.position, 0x00ff88, 25);
-          }
-        }
+    for (let i = spawner.pickups.length - 1; i >= 0; i--) {
+      const pickup = spawner.pickups[i];
+      if (!pickup.dead && player.position.distanceTo(pickup.position) < 3 && this.navigation.firstHit(player.position, pickup.position) === null) {
+        pickup.destroy(); spawner.pickups.splice(i, 1);
+        player.upgrade(); player.score += 250;
+        this.particles?.spawnBurst(player.position, 0x00f0ff, 30);
       }
     }
-
-    // 3. Jogador vs Equipamentos (Evolução)
-    for (let pIndex = spawner.pickups.length - 1; pIndex >= 0; pIndex--) {
-      const pickup = spawner.pickups[pIndex];
-      if (pickup.dead) continue;
-
-      const dist = player.position.distanceTo(pickup.position);
-      if (dist < 3.0) {
-        pickup.destroy();
-        spawner.pickups.splice(pIndex, 1);
-        player.upgrade();
-        player.score += 250;
-
-        if (this.particles) {
-          this.particles.spawnBurst(player.position, 0x00f0ff, 30);
-        }
-      }
-    }
-
-    // 4. Limpeza de Sobreviventes Mortos
-    for (let sIndex = spawner.survivors.length - 1; sIndex >= 0; sIndex--) {
-      const survivor = spawner.survivors[sIndex];
-      if (survivor.dead) {
-        survivor.destroy();
-        spawner.survivors.splice(sIndex, 1);
+    for (let i = spawner.survivors.length - 1; i >= 0; i--) {
+      if (spawner.survivors[i].dead) {
+        spawner.survivors[i].destroy(); spawner.survivors.splice(i, 1);
       }
     }
   }

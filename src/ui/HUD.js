@@ -11,6 +11,9 @@ export class HUD {
     this.avatarImg = document.getElementById('hud-avatar');
     this.banner = document.getElementById('evolution-banner');
     this.lastTier = 1;
+    this.escortText = document.getElementById('escort-val');
+    this.refugeText = document.getElementById('refuge-distance');
+    this.refugeArrow = document.getElementById('refuge-arrow');
 
     // Cache de valores anteriores para evitar reflows de DOM desnecessários
     this._lastHp = -1;
@@ -20,7 +23,11 @@ export class HUD {
     this._lastWave = -1;
   }
 
-  update(player, wave) {
+  update(player, wave, survivors, reception, navigation) {
+    this.escortText.textContent = survivors.filter(s => s.state === 'following' && !s.dead).length;
+    const dx = reception.x - player.position.x, dz = reception.z - player.position.z;
+    this.refugeText.textContent = navigation.inSafeZone(player.position) ? 'Você está no abrigo' : `Abrigo · ${Math.round(Math.hypot(dx, dz))} m`;
+    this.refugeArrow.style.transform = `rotate(${Math.atan2(dx, -dz)}rad)`;
     // Atualizar vida somente quando mudar
     const roundedHp = Math.ceil(player.hp);
     if (roundedHp !== this._lastHp || player.maxHp !== this._lastMaxHp) {
@@ -41,7 +48,7 @@ export class HUD {
     }
 
     // Atualizar Avatar do HUD
-    if (this.avatarImg.src !== player.currentSkinUrl) {
+    if (this.avatarImg.getAttribute('src') !== player.currentSkinUrl) {
       this.avatarImg.src = player.currentSkinUrl;
     }
 

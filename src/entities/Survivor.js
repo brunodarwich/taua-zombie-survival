@@ -12,12 +12,13 @@ const sharedSurvivorShadowMat = new THREE.MeshBasicMaterial({
 });
 
 export class Survivor {
-  constructor(scene, position) {
+  constructor(scene, position, navigation) {
     this.scene = scene;
     this.position = position.clone();
     this.hp = 100;
     this.dead = false;
-    this.rescued = false;
+    this.state = 'waiting';
+    this.navigation = navigation;
     this.scale = 3.4; // Aumentado para visibilidade nítida
     this.followSpeed = 11;
     this._dirVector = new THREE.Vector3();
@@ -73,9 +74,9 @@ export class Survivor {
     this.scene.add(this.group);
   }
 
-  rescue() {
-    if (this.rescued) return;
-    this.rescued = true;
+  startFollowing() {
+    if (this.state !== 'waiting') return;
+    this.state = 'following';
 
     // Troca para capacete aleatório!
     const randHelmet = ASSETS.helmet[Math.floor(Math.random() * ASSETS.helmet.length)];
@@ -89,7 +90,7 @@ export class Survivor {
       if (this.sprite) this.sprite.scale.set(this.scale, this.scale, 1);
     }, 200);
 
-    // Balão SALVO
+    // Escoltar ainda não conclui o resgate.
     const ctx = this.helpCanvas.getContext('2d');
     ctx.clearRect(0, 0, 160, 70);
     ctx.lineWidth = 6;
@@ -104,7 +105,7 @@ export class Survivor {
     ctx.font = '900 26px Impact, "Arial Black", sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('SALVO!', 80, 36);
+    ctx.fillText('SIGA-ME!', 80, 36);
     this.helpSprite.material.map.needsUpdate = true;
 
     setTimeout(() => {
@@ -113,11 +114,17 @@ export class Survivor {
       }
     }, 1500);
 
+  }
+
+  deliver() {
+    if (this.state !== 'following') return false;
+    this.state = 'delivered';
     sounds.playRescue();
+    return true;
   }
 
   takeDamage(amount) {
-    if (this.rescued) return false;
+    if (this.dead || this.state === 'delivered' || this.navigation.inSafeZone(this.position)) return false;
     this.hp -= amount;
     this.sprite.material.color.setRGB(1, 0.2, 0.2);
     setTimeout(() => {
@@ -128,22 +135,24 @@ export class Survivor {
 
     if (this.hp <= 0) {
       this.dead = true;
+      this.state = 'dead';
       return true;
     }
     return false;
   }
 
-  update(delta, playerPosition) {
+  update(delta, playerPosition, rescuePoint) {
     if (this.dead) return;
 
-    if (this.rescued) {
-      const dir = this._dirVector.subVectors(playerPosition, this.position);
+    if (this.state === 'following') {
+      const target = this.navigation.inSafeZone(playerPosition) ? rescuePoint : playerPosition;
+      const dir = this._dirVector.set(target.x - this.position.x, 0, target.z - this.position.z);
       dir.y = 0;
       const dist = dir.length();
 
-      if (dist > 4.0) {
+      if (dist > 1.8) {
         dir.normalize();
-        this.position.addScaledVector(dir, this.followSpeed * delta);
+        this.navigation.follow(this, target, this.followSpeed, delta, false, 1.8);
         this.group.position.copy(this.position);
 
         const walkCycle = Math.sin(Date.now() * 0.015);

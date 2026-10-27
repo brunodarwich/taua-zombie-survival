@@ -12,8 +12,9 @@ const sharedShadowMat = new THREE.MeshBasicMaterial({
 });
 
 export class Zombie {
-  constructor(scene, position, waveMultiplier = 1) {
+  constructor(scene, position, waveMultiplier = 1, navigation) {
     this.scene = scene;
+    this.navigation = navigation;
     this.hp = 80 * waveMultiplier;
     this.maxHp = this.hp;
     this.speed = (5 + Math.random() * 2.2) * Math.min(1.5, 1 + (waveMultiplier - 1) * 0.08);
@@ -74,11 +75,11 @@ export class Zombie {
   update(delta, player, survivors, currentTime) {
     if (this.dead) return;
 
-    let target = player;
-    let minDistSq = this.position.distanceToSquared(player.position);
+    let target = this.navigation.inSafeZone(player.position) ? null : player;
+    let minDistSq = target ? this.position.distanceToSquared(player.position) : Infinity;
 
     for (const survivor of survivors) {
-      if (!survivor.rescued) {
+      if (!survivor.dead && survivor.state !== 'delivered' && !this.navigation.inSafeZone(survivor.position)) {
         const dSq = this.position.distanceToSquared(survivor.position);
         if (dSq < minDistSq) {
           minDistSq = dSq;
@@ -87,13 +88,15 @@ export class Zombie {
       }
     }
 
-    const dir = this._dirVector.subVectors(target.position, this.position);
+    // With nobody exposed, gather outside the entrance without entering the refuge.
+    const targetPosition = target ? target.position : { x: 0, y: 0, z: -27 };
+    const dir = this._dirVector.set(targetPosition.x - this.position.x, 0, targetPosition.z - this.position.z);
     dir.y = 0;
     const dist = dir.length();
 
     if (dist > 1.4) {
       dir.normalize();
-      this.position.addScaledVector(dir, this.speed * delta);
+      this.navigation.follow(this, targetPosition, this.speed, delta, true, 1.3);
       this.group.position.copy(this.position);
 
       // Balanço Paper Mario (passo firme)
@@ -107,7 +110,7 @@ export class Zombie {
         this.sprite.scale.x = Math.abs(this.scale);
       }
     } else {
-      if (currentTime - this.lastAttack >= this.attackCooldown) {
+      if (target && this.navigation.firstHit(this.position, target.position) === null && currentTime - this.lastAttack >= this.attackCooldown) {
         this.lastAttack = currentTime;
         if (target === player) {
           player.takeDamage(this.damage);
