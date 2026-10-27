@@ -31,9 +31,13 @@ require('node:fs').mkdirSync('.cache', { recursive: true });
     assert.equal(await page.evaluate(async()=>(await import(document.querySelector('script[type=module][src*="src/main.js"]').src)).inspectGame().zoomTarget), 1.1);
     await page.click('#zoom-reset');
     await page.keyboard.down('KeyW');
-    await page.waitForFunction(async()=>(await import(document.querySelector('script[type=module][src*="src/main.js"]').src)).inspectGame().player.position.z < 0);
+    const moved = await page.waitForFunction(async()=>{
+      const z=(await import(document.querySelector('script[type=module][src*="src/main.js"]').src)).inspectGame().player.position.z;
+      return z < -0.1 ? z : false;
+    });
+    const movedZ = await moved.jsonValue();
     await page.keyboard.up('KeyW');
-    assert.ok((await page.evaluate(async()=>(await import(document.querySelector('script[type=module][src*="src/main.js"]').src)).inspectGame().player.position.z))<0);
+    assert.ok(movedZ < -0.1);
     await page.screenshot({path:'.cache/game-desktop.png'});
     const delivery = await page.evaluate(async()=>{
       const g=(await import(document.querySelector('script[type=module][src*="src/main.js"]').src)).inspectGame();
