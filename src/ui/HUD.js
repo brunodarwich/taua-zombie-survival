@@ -11,34 +11,53 @@ export class HUD {
     this.avatarImg = document.getElementById('hud-avatar');
     this.banner = document.getElementById('evolution-banner');
     this.lastTier = 1;
+
+    // Cache de valores anteriores para evitar reflows de DOM desnecessários
+    this._lastHp = -1;
+    this._lastMaxHp = -1;
+    this._lastScore = -1;
+    this._lastRescued = -1;
+    this._lastWave = -1;
   }
 
   update(player, wave) {
-    // Atualizar vida
-    const hpPct = Math.max(0, Math.min(100, (player.hp / player.maxHp) * 100));
-    this.hpBar.style.width = `${hpPct}%`;
-    this.hpText.textContent = `${Math.ceil(player.hp)} / ${player.maxHp}`;
+    // Atualizar vida somente quando mudar
+    const roundedHp = Math.ceil(player.hp);
+    if (roundedHp !== this._lastHp || player.maxHp !== this._lastMaxHp) {
+      this._lastHp = roundedHp;
+      this._lastMaxHp = player.maxHp;
+      const hpPct = Math.max(0, Math.min(100, (player.hp / player.maxHp) * 100));
+      this.hpBar.style.width = `${hpPct}%`;
+      this.hpText.textContent = `${roundedHp} / ${player.maxHp}`;
+    }
 
     // Atualizar Tier
     const tierInfo = CONFIG.TIER_PROPERTIES[player.tier];
-    this.tierBadge.textContent = tierInfo.name;
-    this.tierBadge.className = `tier-tag tier-${player.tier}`;
+    if (player.tier !== this.lastTier) {
+      this.tierBadge.textContent = tierInfo.name;
+      this.tierBadge.className = `tier-tag tier-${player.tier}`;
+      this.showEvolutionAlert(tierInfo.name);
+      this.lastTier = player.tier;
+    }
 
     // Atualizar Avatar do HUD
     if (this.avatarImg.src !== player.currentSkinUrl) {
       this.avatarImg.src = player.currentSkinUrl;
     }
 
-    // Alerta de evolução quando sobe de Tier
-    if (player.tier > this.lastTier) {
-      this.showEvolutionAlert(tierInfo.name);
-      this.lastTier = player.tier;
+    // Pontos, Resgates e Wave somente quando alterados
+    if (player.score !== this._lastScore) {
+      this._lastScore = player.score;
+      this.scoreText.textContent = player.score;
     }
-
-    // Pontos e Resgates
-    this.scoreText.textContent = player.score;
-    this.rescueText.textContent = player.rescuedCount;
-    this.waveText.textContent = wave;
+    if (player.rescuedCount !== this._lastRescued) {
+      this._lastRescued = player.rescuedCount;
+      this.rescueText.textContent = player.rescuedCount;
+    }
+    if (wave !== this._lastWave) {
+      this._lastWave = wave;
+      this.waveText.textContent = wave;
+    }
   }
 
   showEvolutionAlert(tierName) {

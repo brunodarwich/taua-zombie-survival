@@ -1,5 +1,24 @@
 import * as THREE from 'three';
 
+// Geometrias e materiais compartilhados estaticamente para evitar alocações constantes
+const sharedCoreGeo = new THREE.SphereGeometry(0.3, 6, 6);
+const sharedCoreMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+const sharedGlowGeo = new THREE.SphereGeometry(0.5, 6, 6);
+const glowMaterialCache = new Map();
+
+function getGlowMaterial(colorHex) {
+  if (glowMaterialCache.has(colorHex)) {
+    return glowMaterialCache.get(colorHex);
+  }
+  const mat = new THREE.MeshBasicMaterial({
+    color: colorHex,
+    transparent: true,
+    opacity: 0.65
+  });
+  glowMaterialCache.set(colorHex, mat);
+  return mat;
+}
+
 export class Bullet {
   constructor(scene, origin, direction, properties) {
     this.scene = scene;
@@ -9,36 +28,23 @@ export class Bullet {
     this.speed = properties.bulletSpeed;
     this.damage = properties.bulletDamage;
     this.color = properties.bulletColor;
-    this.glowColor = properties.glowColor;
     this.life = 1.6;
     this.dead = false;
 
     this.group = new THREE.Group();
 
-    // 1. Núcleo brilhante (Core)
-    const coreGeo = new THREE.SphereGeometry(0.3, 8, 8);
-    const coreMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
-    const coreMesh = new THREE.Mesh(coreGeo, coreMat);
+    // 1. Núcleo brilhante (Core compartilhado)
+    const coreMesh = new THREE.Mesh(sharedCoreGeo, sharedCoreMat);
     this.group.add(coreMesh);
 
-    // 2. Halo exterior colorido (Plasma Glow)
-    const glowGeo = new THREE.SphereGeometry(0.5, 8, 8);
-    const glowMat = new THREE.MeshBasicMaterial({
-      color: this.color,
-      transparent: true,
-      opacity: 0.65
-    });
-    const glowMesh = new THREE.Mesh(glowGeo, glowMat);
+    // 2. Halo exterior colorido (Plasma Glow com material cached)
+    const glowMesh = new THREE.Mesh(sharedGlowGeo, getGlowMaterial(this.color));
     this.group.add(glowMesh);
-
-    // 3. Mini luz pontual para iluminação dinâmica Paper Mario nos arredores
-    this.light = new THREE.PointLight(this.color, 1.8, 4.5);
-    this.group.add(this.light);
 
     this.group.position.copy(this.position);
     this.scene.add(this.group);
 
-    // Trilha de partículas leves
+    // Trilha de partículas controlada
     this.trailTimer = 0;
   }
 
@@ -50,7 +56,7 @@ export class Bullet {
 
     // Efeito de cauda/trilha
     this.trailTimer += delta;
-    if (this.trailTimer >= 0.04 && particleSystem) {
+    if (this.trailTimer >= 0.08 && particleSystem) {
       this.trailTimer = 0;
       particleSystem.spawnHitSparks(this.position, this.color, 1);
     }

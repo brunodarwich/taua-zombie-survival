@@ -18,6 +18,7 @@ export class Spawner {
     this.survivorInterval = 12.0;
     this.pickupSpawnTimer = 0;
     this.pickupInterval = 16.0;
+    this.maxZombies = 45; // Limite para garantir 60fps estável
   }
 
   update(delta, player, currentTime) {
@@ -25,7 +26,9 @@ export class Spawner {
     this.zombieSpawnTimer += delta;
     if (this.zombieSpawnTimer >= this.zombieInterval) {
       this.zombieSpawnTimer = 0;
-      this.spawnZombie(player.position);
+      if (this.zombies.length < this.maxZombies) {
+        this.spawnZombie(player.position);
+      }
       // Dificuldade gradual
       this.zombieInterval = Math.max(0.6, 2.2 - (this.wave * 0.12));
     }

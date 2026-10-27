@@ -2,6 +2,15 @@ import * as THREE from 'three';
 import { ASSETS } from '../config.js';
 import { textureCache } from '../systems/TextureCache.js';
 
+// Geometria e material compartilhados do anel de pickup
+const sharedRingGeo = new THREE.RingGeometry(0.8, 1.1, 24);
+const sharedRingMat = new THREE.MeshBasicMaterial({
+  color: 0x00ffff,
+  side: THREE.DoubleSide,
+  transparent: true,
+  opacity: 0.6
+});
+
 export class Pickup {
   constructor(scene, position) {
     this.scene = scene;
@@ -13,24 +22,17 @@ export class Pickup {
     this.pickupUrl = randEquip;
 
     const texture = textureCache.load(this.pickupUrl);
-    const material = new THREE.SpriteMaterial({
+    this.material = new THREE.SpriteMaterial({
       map: texture,
       transparent: true,
       depthTest: true
     });
-    this.sprite = new THREE.Sprite(material);
+    this.sprite = new THREE.Sprite(this.material);
     this.sprite.scale.set(1.7, 1.7, 1);
     this.sprite.position.y = 0.9;
 
-    // Anel de luz giratório no chão
-    const ringGeo = new THREE.RingGeometry(0.8, 1.1, 32);
-    const ringMat = new THREE.MeshBasicMaterial({
-      color: 0x00ffff,
-      side: THREE.DoubleSide,
-      transparent: true,
-      opacity: 0.6
-    });
-    this.ring = new THREE.Mesh(ringGeo, ringMat);
+    // Anel de luz giratório compartilhado
+    this.ring = new THREE.Mesh(sharedRingGeo, sharedRingMat);
     this.ring.rotation.x = -Math.PI / 2;
     this.ring.position.y = 0.05;
 
@@ -53,5 +55,6 @@ export class Pickup {
   destroy() {
     this.dead = true;
     this.scene.remove(this.group);
+    if (this.material) this.material.dispose();
   }
 }

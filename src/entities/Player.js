@@ -17,6 +17,8 @@ export class Player {
 
     this.position = new THREE.Vector3(0, 0, 0);
     this.aimDirection = new THREE.Vector3(1, 0, 0);
+    this._moveVector = new THREE.Vector3();
+    this._hitVector = new THREE.Vector3();
 
     // Sprite 3D Paper Mario
     const texture = textureCache.load(this.currentSkinUrl);
@@ -123,7 +125,7 @@ export class Player {
   }
 
   update(delta, inputState, raycaster, groundPlane, camera) {
-    const move = new THREE.Vector3();
+    const move = this._moveVector.set(0, 0, 0);
     if (inputState.forward) move.z -= 1;
     if (inputState.backward) move.z += 1;
     if (inputState.left) move.x -= 1;
@@ -160,7 +162,7 @@ export class Player {
       const intersects = raycaster.intersectObject(groundPlane);
       if (intersects.length > 0) {
         const hitPoint = intersects[0].point;
-        const dir = new THREE.Vector3().subVectors(hitPoint, this.position);
+        const dir = this._hitVector.subVectors(hitPoint, this.position);
         dir.y = 0;
         if (dir.lengthSq() > 0.1) {
           dir.normalize();

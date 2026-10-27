@@ -3,6 +3,14 @@ import { ASSETS } from '../config.js';
 import { textureCache } from '../systems/TextureCache.js';
 import { sounds } from '../audio.js';
 
+// Compartilhamento estático de sombra para todos os zumbis
+const sharedShadowGeo = new THREE.CircleGeometry(1.0, 16);
+const sharedShadowMat = new THREE.MeshBasicMaterial({
+  color: 0x070b14,
+  transparent: true,
+  opacity: 0.5
+});
+
 export class Zombie {
   constructor(scene, position, waveMultiplier = 1) {
     this.scene = scene;
@@ -16,25 +24,20 @@ export class Zombie {
 
     this.position = position.clone();
     this.scale = 3.6; // Aumentado significativamente para ser bem visível
+    this._dirVector = new THREE.Vector3();
 
     const texture = textureCache.load(ASSETS.zombie);
-    const material = new THREE.SpriteMaterial({
+    this.material = new THREE.SpriteMaterial({
       map: texture,
       transparent: true,
       depthTest: true
     });
-    this.sprite = new THREE.Sprite(material);
+    this.sprite = new THREE.Sprite(this.material);
     this.sprite.scale.set(this.scale, this.scale, 1);
     this.sprite.position.y = this.scale * 0.48;
 
-    // Sombra Paper Mario estilizada nítida
-    const shadowGeo = new THREE.CircleGeometry(1.0, 20);
-    const shadowMat = new THREE.MeshBasicMaterial({
-      color: 0x070b14,
-      transparent: true,
-      opacity: 0.5
-    });
-    this.shadow = new THREE.Mesh(shadowGeo, shadowMat);
+    // Sombra Paper Mario estilizada compartilhada
+    this.shadow = new THREE.Mesh(sharedShadowGeo, sharedShadowMat);
     this.shadow.rotation.x = -Math.PI / 2;
     this.shadow.position.y = 0.05;
 
@@ -84,7 +87,7 @@ export class Zombie {
       }
     }
 
-    const dir = new THREE.Vector3().subVectors(target.position, this.position);
+    const dir = this._dirVector.subVectors(target.position, this.position);
     dir.y = 0;
     const dist = dir.length();
 
@@ -116,6 +119,10 @@ export class Zombie {
   }
 
   destroy() {
+    this.dead = true;
     this.scene.remove(this.group);
+    if (this.material) {
+      this.material.dispose();
+    }
   }
 }

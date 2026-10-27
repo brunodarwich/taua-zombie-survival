@@ -3,6 +3,14 @@ import { ASSETS } from '../config.js';
 import { textureCache } from '../systems/TextureCache.js';
 import { sounds } from '../audio.js';
 
+// Geometria e material de sombra compartilhados
+const sharedSurvivorShadowGeo = new THREE.CircleGeometry(0.9, 16);
+const sharedSurvivorShadowMat = new THREE.MeshBasicMaterial({
+  color: 0x070b14,
+  transparent: true,
+  opacity: 0.45
+});
+
 export class Survivor {
   constructor(scene, position) {
     this.scene = scene;
@@ -12,17 +20,18 @@ export class Survivor {
     this.rescued = false;
     this.scale = 3.4; // Aumentado para visibilidade nítida
     this.followSpeed = 11;
+    this._dirVector = new THREE.Vector3();
 
     const randUnarmed = ASSETS.unarmed[Math.floor(Math.random() * ASSETS.unarmed.length)];
     this.unarmedUrl = randUnarmed;
 
     const texture = textureCache.load(this.unarmedUrl);
-    const material = new THREE.SpriteMaterial({
+    this.material = new THREE.SpriteMaterial({
       map: texture,
       transparent: true,
       depthTest: true
     });
-    this.sprite = new THREE.Sprite(material);
+    this.sprite = new THREE.Sprite(this.material);
     this.sprite.scale.set(this.scale, this.scale, 1);
     this.sprite.position.y = this.scale * 0.48;
 
@@ -45,19 +54,13 @@ export class Survivor {
     ctx.textBaseline = 'middle';
     ctx.fillText('SOCORRO!', 80, 36);
 
-    const helpTex = new THREE.CanvasTexture(this.helpCanvas);
-    const helpMat = new THREE.SpriteMaterial({ map: helpTex, transparent: true, depthTest: false });
-    this.helpSprite = new THREE.Sprite(helpMat);
+    this.helpTex = new THREE.CanvasTexture(this.helpCanvas);
+    this.helpMat = new THREE.SpriteMaterial({ map: this.helpTex, transparent: true, depthTest: false });
+    this.helpSprite = new THREE.Sprite(this.helpMat);
     this.helpSprite.scale.set(2.4, 1.1, 1);
     this.helpSprite.position.y = this.scale + 0.9;
 
-    const shadowGeo = new THREE.CircleGeometry(0.9, 20);
-    const shadowMat = new THREE.MeshBasicMaterial({
-      color: 0x070b14,
-      transparent: true,
-      opacity: 0.45
-    });
-    this.shadow = new THREE.Mesh(shadowGeo, shadowMat);
+    this.shadow = new THREE.Mesh(sharedSurvivorShadowGeo, sharedSurvivorShadowMat);
     this.shadow.rotation.x = -Math.PI / 2;
     this.shadow.position.y = 0.05;
 
@@ -134,7 +137,7 @@ export class Survivor {
     if (this.dead) return;
 
     if (this.rescued) {
-      const dir = new THREE.Vector3().subVectors(playerPosition, this.position);
+      const dir = this._dirVector.subVectors(playerPosition, this.position);
       dir.y = 0;
       const dist = dir.length();
 
@@ -163,6 +166,10 @@ export class Survivor {
   }
 
   destroy() {
+    this.dead = true;
     this.scene.remove(this.group);
+    if (this.material) this.material.dispose();
+    if (this.helpMat) this.helpMat.dispose();
+    if (this.helpTex) this.helpTex.dispose();
   }
 }
