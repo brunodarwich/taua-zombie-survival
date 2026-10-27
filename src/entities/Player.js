@@ -130,9 +130,11 @@ export class Player {
     if (inputState.backward) move.z += 1;
     if (inputState.left) move.x -= 1;
     if (inputState.right) move.x += 1;
+    const analog = Math.hypot(inputState.moveX || 0, inputState.moveZ || 0);
+    if (analog > 0) move.set(inputState.moveX, 0, inputState.moveZ);
 
     if (move.lengthSq() > 0) {
-      move.normalize();
+      if (!analog || move.lengthSq() > 1) move.normalize();
       navigation.move(this.position, move.x * CONFIG.PLAYER_SPEED * delta, move.z * CONFIG.PLAYER_SPEED * delta);
 
       const limit = CONFIG.WORLD_SIZE / 2 - 2;

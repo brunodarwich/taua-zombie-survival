@@ -22,6 +22,7 @@ export class Zombie {
     this.attackCooldown = 0.8;
     this.lastAttack = 0;
     this.dead = false;
+    this.hitTime = 0;
 
     this.position = position.clone();
     this.scale = 3.6; // Aumentado significativamente para ser bem visível
@@ -55,14 +56,7 @@ export class Zombie {
     sounds.playZombieHit();
 
     // Efeito Paper Mario de Squash & Stretch no impacto
-    this.sprite.scale.set(this.scale * 1.25, this.scale * 0.8, 1);
-    this.sprite.material.color.setRGB(1, 0.1, 0.1);
-    setTimeout(() => {
-      if (this.sprite && this.sprite.material) {
-        this.sprite.scale.set(this.scale, this.scale, 1);
-        this.sprite.material.color.setRGB(1, 1, 1);
-      }
-    }, 110);
+    this.hitTime = 0.16;
 
     if (this.hp <= 0 && !this.dead) {
       this.dead = true;
@@ -74,6 +68,7 @@ export class Zombie {
 
   update(delta, player, survivors, currentTime) {
     if (this.dead) return;
+    this.hitTime = Math.max(0, this.hitTime - delta);
 
     let target = this.navigation.inSafeZone(player.position) ? null : player;
     let minDistSq = target ? this.position.distanceToSquared(player.position) : Infinity;
@@ -96,7 +91,7 @@ export class Zombie {
 
     if (dist > 1.4) {
       dir.normalize();
-      this.navigation.follow(this, targetPosition, this.speed, delta, true, 1.3);
+      this.navigation.follow(this, targetPosition, this.speed * (this.hitTime > 0 ? 0.3 : 1), delta, true, 1.3);
       this.group.position.copy(this.position);
 
       // Balanço Paper Mario (passo firme)
@@ -119,6 +114,10 @@ export class Zombie {
         }
       }
     }
+    const hit = this.hitTime / 0.16;
+    const facing = Math.sign(this.sprite.scale.x) || 1;
+    this.sprite.scale.set(facing * this.scale * (1 + hit * 0.25), this.scale * (1 - hit * 0.2), 1);
+    this.material.color.setRGB(1, 1 - hit * 0.85, 1 - hit * 0.7);
   }
 
   destroy() {

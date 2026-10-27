@@ -9,7 +9,7 @@ npm install
 npm run dev
 ```
 
-Na abertura, clique em **Jogar** e escolha um personagem. Use **WASD/setas** para mover, mouse para mirar e **clique/espaço** para atirar. No celular, use o joystick, toque no cenário para mirar e mantenha **Fogo** pressionado para disparar.
+Na abertura, clique em **Jogar** e escolha um personagem. Use **WASD/setas** para mover e **clique/espaço** para atirar. Cada disparo mira no zumbi vivo mais próximo; sem inimigos, usa a direção do mouse ou do toque no cenário. No celular e tablet, use o joystick analógico e mantenha **Fogo** pressionado para disparar enquanto se move. Os controles acompanham a área visível, as margens de segurança e a rotação da tela.
 
 Use a roda do mouse ou **+/−** para ajustar a câmera; **Restaurar** volta à visão padrão. Paredes e objetos bloqueiam movimento e tiros. Aproxime-se dos sobreviventes para iniciar a escolta e proteja-os até o **Coordenador de Resgate**, no abrigo ao norte. Apenas a entrega rende um resgate e 350 pontos. A área verde protege o jogador e os sobreviventes dos zumbis.
 

@@ -41,6 +41,11 @@ export class Bullet {
     // 2. Halo exterior colorido (Plasma Glow com material cached)
     const glowMesh = new THREE.Mesh(sharedGlowGeo, getGlowMaterial(this.color));
     this.group.add(glowMesh);
+    // A continuous tracer stays readable even when a phone renders fewer frames.
+    coreMesh.scale.set(0.5, 0.5, 2.8);
+    glowMesh.scale.set(0.55, 0.55, 2.2);
+    glowMesh.position.z = -0.55;
+    this.group.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), this.direction);
 
     this.group.position.copy(this.position);
     this.scene.add(this.group);
@@ -60,7 +65,7 @@ export class Bullet {
     this.trailTimer += delta;
     if (this.trailTimer >= 0.08 && particleSystem) {
       this.trailTimer = 0;
-      particleSystem.spawnHitSparks(this.position, this.color, 1);
+      particleSystem.flash(this.position, this.color, 2, 0.12);
     }
 
     this.life -= delta;

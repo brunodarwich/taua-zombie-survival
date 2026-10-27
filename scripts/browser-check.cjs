@@ -1,5 +1,6 @@
 const { chromium } = require(process.env.PLAYWRIGHT_PACKAGE || 'playwright');
 const assert = require('node:assert/strict');
+const baseURL = process.env.GAME_URL || 'http://127.0.0.1:5173/';
 require('node:fs').mkdirSync('.cache', { recursive: true });
 (async () => {
   const browser = await chromium.launch({headless:true, args:['--use-angle=swiftshader','--enable-unsafe-swiftshader']});
@@ -8,7 +9,7 @@ require('node:fs').mkdirSync('.cache', { recursive: true });
     const page = await browser.newPage({viewport:{width:1440,height:900}});
     page.on('pageerror', e => errors.push(e.message));
     page.on('response', r => { if(r.status() >= 400) failures.push(r.status()+' '+r.url()); });
-    await page.addInitScript(() => Object.defineProperty(navigator, 'maxTouchPoints', { get: () => 0 })); await page.goto('http://127.0.0.1:5173/');
+    await page.addInitScript(() => Object.defineProperty(navigator, 'maxTouchPoints', { get: () => 0 })); await page.goto(baseURL);
     await page.locator('.start-art').evaluate(img => img.decode());
     await page.screenshot({path:'.cache/start-desktop.png'});
     const opening = await page.evaluate(async()=>{const g=(await import(document.querySelector('script[type=module][src*="src/main.js"]').src)).inspectGame(); return {running:g.gameRunning,zombies:g.spawner.zombies.length,timer:g.spawner.zombieSpawnTimer};});
@@ -29,12 +30,15 @@ require('node:fs').mkdirSync('.cache', { recursive: true });
     await page.waitForTimeout(500);
     assert.equal(await page.evaluate(async()=>(await import(document.querySelector('script[type=module][src*="src/main.js"]').src)).inspectGame().zoomTarget), 1.1);
     await page.click('#zoom-reset');
-    await page.keyboard.down('KeyW'); await page.waitForTimeout(350); await page.keyboard.up('KeyW');
+    await page.keyboard.down('KeyW');
+    await page.waitForFunction(async()=>(await import(document.querySelector('script[type=module][src*="src/main.js"]').src)).inspectGame().player.position.z < 0);
+    await page.keyboard.up('KeyW');
     assert.ok((await page.evaluate(async()=>(await import(document.querySelector('script[type=module][src*="src/main.js"]').src)).inspectGame().player.position.z))<0);
     await page.screenshot({path:'.cache/game-desktop.png'});
     const delivery = await page.evaluate(async()=>{
       const g=(await import(document.querySelector('script[type=module][src*="src/main.js"]').src)).inspectGame();
       const s=g.spawner.survivors[0];
+      g.player.score=0;
       g.player.position.set(0,0,-9);g.mission.update(g.player,g.spawner.survivors);
       const recruit={state:s.state,score:g.player.score,saved:g.player.rescuedCount};
       // Test the escort from behind a wall to the coordinator using real entity updates.
@@ -67,7 +71,7 @@ require('node:fs').mkdirSync('.cache', { recursive: true });
     const mobile=await browser.newPage({viewport:{width:390,height:844},isMobile:true,hasTouch:true,deviceScaleFactor:1});
     mobile.on('pageerror',e=>errors.push('mobile: '+e.message));
     mobile.on('response', r=>{if(r.status()>=400)failures.push(r.status()+' '+r.url());});
-    await mobile.goto('http://127.0.0.1:5173/');await mobile.locator('.start-art').evaluate(img=>img.decode());
+    await mobile.goto(baseURL);await mobile.locator('.start-art').evaluate(img=>img.decode());
     for (const viewport of [{width:320,height:640},{width:768,height:1024},{width:1024,height:768},{width:390,height:844}]) {
       await mobile.setViewportSize(viewport);
       const play = await mobile.locator('#play-btn').boundingBox();
@@ -77,6 +81,30 @@ require('node:fs').mkdirSync('.cache', { recursive: true });
     await mobile.tap('#play-btn'); await mobile.waitForTimeout(400); await mobile.locator('.char-card').first().tap(); await mobile.waitForTimeout(500); await mobile.screenshot({path:'.cache/mobile-after-select.png'});
     await mobile.evaluate(async()=>{const g=(await import(document.querySelector('script[type=module][src*="src/main.js"]').src)).inspectGame();g.player.hp=g.player.maxHp=1e6;g.spawner.zombieInterval=1e6;g.renderer.setPixelRatio(0.65);});
     assert.equal(await mobile.locator('#mobile-controls').isVisible(),true);
+    for (const viewport of [{width:320,height:640},{width:768,height:1024},{width:1024,height:768},{width:820,height:1180},{width:1180,height:820},{width:1366,height:1024},{width:390,height:844}]) {
+      await mobile.setViewportSize(viewport);
+      await mobile.waitForFunction(({width,height}) => Math.abs(document.body.clientWidth-width)<1 && Math.abs(document.body.clientHeight-height)<1, viewport);
+      for (const selector of ['#joystick-base', '#joystick-thumb', '#fire-button', '#zoom-controls', '.refuge-guide']) {
+        const box = await mobile.locator(selector).boundingBox();
+        assert.ok(box && box.x >= 0 && box.y >= 0 && box.x + box.width <= viewport.width + 1 && box.y + box.height <= viewport.height + 1, `${selector} clipped at ${JSON.stringify(viewport)}: ${JSON.stringify(box)}`);
+      }
+      if (viewport.width === 1024) await mobile.screenshot({path:'.cache/game-tablet-landscape.png'});
+      if (viewport.width === 768) await mobile.screenshot({path:'.cache/game-tablet-portrait.png'});
+    }
+    // Real multi-touch: movement and continuous fire must work independently.
+    const cdp = await mobile.context().newCDPSession(mobile);
+    const joy = await mobile.locator('#joystick-base').boundingBox();
+    const fire = await mobile.locator('#fire-button').boundingBox();
+    const moveTouch = {x:joy.x + joy.width * .85,y:joy.y + joy.height / 2,id:1};
+    const fireTouch = {x:fire.x + fire.width / 2,y:fire.y + fire.height / 2,id:2};
+    await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[moveTouch,fireTouch]});
+    await mobile.waitForTimeout(120);
+    const active = await mobile.evaluate(async()=>{const g=(await import(document.querySelector('script[type=module][src*="src/main.js"]').src)).inspectGame();return {move:g.inputState.moveX,fire:g.inputState.isMouseDown};});
+    assert.ok(active.move > .5);assert.equal(active.fire,true);
+    await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+    assert.equal(await mobile.evaluate(async()=>(await import(document.querySelector('script[type=module][src*="src/main.js"]').src)).inspectGame().inputState.isMouseDown),false);
+    await cdp.send('Input.dispatchTouchEvent',{type:'touchCancel',touchPoints:[]});
+    assert.equal(await mobile.evaluate(async()=>(await import(document.querySelector('script[type=module][src*="src/main.js"]').src)).inspectGame().inputState.moveX),0);
     await mobile.tap('#zoom-in');
     assert.equal(await mobile.evaluate(async()=>(await import(document.querySelector('script[type=module][src*="src/main.js"]').src)).inspectGame().inputState.isMouseDown),false);
     await mobile.screenshot({path:'.cache/game-mobile.png'});

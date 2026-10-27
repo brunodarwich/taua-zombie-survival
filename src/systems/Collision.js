@@ -37,7 +37,7 @@ export class CollisionSystem {
       }
       if (nearest === Infinity) continue;
       const impact = bullet.previousPosition.clone().lerp(bullet.position, nearest);
-      this.particles?.spawnHitSparks(impact, bullet.color, 10);
+      this.particles?.spawnImpact(impact, bullet.color, bullet.direction, targetIndex >= 0);
       bullet.destroy(); bullets.splice(bi, 1);
       if (targetIndex >= 0) {
         const zombie = spawner.zombies[targetIndex];

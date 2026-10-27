@@ -12,6 +12,8 @@ export class ParticleSystem {
 
     // Cache de materiais por cor para evitar criar milhares de MeshBasicMaterial
     this.materialCache = new Map();
+    this.flashes = [];
+    this.ringGeo = new THREE.RingGeometry(0.65, 1, 24);
   }
 
   getMaterial(colorHex) {
@@ -53,7 +55,7 @@ export class ParticleSystem {
     for (let i = 0; i < actualCount; i++) {
       const mesh = this.getMesh(color);
       mesh.position.copy(position);
-      mesh.position.y += (Math.random() - 0.5) * 0.6 + 1.2;
+      mesh.position.y += (Math.random() - 0.5) * 0.6;
 
       const baseScale = 0.8 + Math.random() * 0.8;
       mesh.scale.set(baseScale, baseScale, baseScale);
@@ -76,6 +78,40 @@ export class ParticleSystem {
         maxLife: 0.6,
         baseScale
       });
+    }
+  }
+
+  flash(position, color, size, life, ring = false) {
+    if (this.flashes.length >= 20) return;
+    const material = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 1,
+      blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
+    const mesh = new THREE.Mesh(ring ? this.ringGeo : this.sharedGeo, material);
+    mesh.position.copy(position);
+    mesh.rotation.x = -Math.PI / 2;
+    mesh.scale.setScalar(size);
+    this.scene.add(mesh);
+    this.flashes.push({ mesh, size, life, maxLife: life, ring });
+  }
+
+  spawnMuzzleFlash(position, direction, color) {
+    this.flash(position, 0xfff4cc, 8, 0.075);
+    this.flash(position, color, 0.6, 0.12, true);
+    const start = this.activeParticles.length;
+    this.spawnHitSparks(position, color, 3);
+    for (const p of this.activeParticles.slice(start)) {
+      p.velocity.copy(direction).multiplyScalar(5).addScalar(Math.random() - 0.5);
+      p.life = p.maxLife = 0.12;
+      p.gravity = 0;
+    }
+  }
+
+  spawnImpact(position, color, direction, zombie = false) {
+    this.flash(position, 0xfff4dc, 10, 0.09);
+    this.flash(position, zombie ? 0xff5577 : color, zombie ? 1 : 0.7, 0.24, true);
+    const start = this.activeParticles.length;
+    this.spawnHitSparks(position, color, zombie ? 12 : 7);
+    for (const p of this.activeParticles.slice(start)) {
+      if (direction) p.velocity.addScaledVector(direction, -4);
     }
   }
 
@@ -113,6 +149,19 @@ export class ParticleSystem {
   }
 
   update(delta) {
+    for (let i = this.flashes.length - 1; i >= 0; i--) {
+      const f = this.flashes[i];
+      f.life -= delta;
+      if (f.life <= 0) {
+        this.scene.remove(f.mesh);
+        f.mesh.material.dispose();
+        this.flashes.splice(i, 1);
+        continue;
+      }
+      const ratio = f.life / f.maxLife;
+      f.mesh.material.opacity = ratio * ratio;
+      f.mesh.scale.setScalar(f.size * (f.ring ? 1 + (1 - ratio) * 2.5 : ratio));
+    }
     for (let i = this.activeParticles.length - 1; i >= 0; i--) {
       const p = this.activeParticles[i];
       p.life -= delta;

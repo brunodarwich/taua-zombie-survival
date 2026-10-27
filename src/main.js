@@ -13,6 +13,7 @@ import { HUD } from './ui/HUD.js';
 import { MobileControls } from './ui/MobileControls.js';
 import { createNavigation, createWorld, RESCUE_POINT } from './world.js';
 import { sounds } from './audio.js';
+import { nearestZombie } from './systems/Targeting.js';
 
 let scene, camera, renderer, player, spawner, collisionSystem, particleSystem, damageTextManager, hud, groundPlane, mission;
 const navigation = createNavigation();
@@ -90,6 +91,7 @@ function startGame(skin) {
 function resetInput() {
   for (const key of ['forward', 'backward', 'left', 'right', 'isMouseDown']) inputState[key] = false;
   inputState.aimDirection = null;
+  inputState.moveX = inputState.moveZ = 0;
 }
 function changeZoom(value) {
   zoomTarget = Math.max(0.7, Math.min(1.5, value));
@@ -143,17 +145,28 @@ function setupEventListeners() {
     if (!gameRunning) return;
     e.preventDefault(); changeZoom(zoomTarget + Math.sign(e.deltaY) * 0.1);
   }, { passive: false });
-  window.addEventListener('resize', () => {
-    camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
-    renderer.setSize(innerWidth, innerHeight); updateCamera(1);
-  });
+  const resize = () => {
+    const width = $('canvas-container').clientWidth, height = $('canvas-container').clientHeight;
+    camera.aspect = width / height; camera.updateProjectionMatrix();
+    renderer.setSize(width, height); updateCamera(1);
+  };
+  window.addEventListener('resize', resize);
+  window.visualViewport?.addEventListener('resize', resize);
+  resize();
 }
 
 function handleShooting(time) {
   if (!inputState.isMouseDown || !player.canShoot(time)) return;
   player.lastShotTime = time;
   const props = CONFIG.TIER_PROPERTIES[player.tier];
+  const target = nearestZombie(player.position, spawner.zombies);
+  if (target) {
+    player.aimDirection.subVectors(target.position, player.position).setY(0).normalize();
+    player.sprite.scale.x = (player.aimDirection.x < 0 ? -1 : 1) * player.scale;
+  }
   sounds.playShoot(player.tier);
+  const muzzle = player.position.clone().setY(1.3).addScaledVector(player.aimDirection, 0.7);
+  particleSystem.spawnMuzzleFlash(muzzle, player.aimDirection, props.bulletColor);
   const base = Math.atan2(player.aimDirection.z, player.aimDirection.x);
   for (let i = 0; i < props.bulletSpread; i++) {
     const angle = base + (props.bulletSpread === 2 ? (i ? 0.1 : -0.1) : props.bulletSpread === 3 ? (i - 1) * 0.14 : 0);
