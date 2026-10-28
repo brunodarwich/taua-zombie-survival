@@ -86,8 +86,6 @@ export class Player {
       this.setSkin(randSkin);
       sounds.playPowerup(3);
     } else {
-      const randSkin = ASSETS.playerTop[Math.floor(Math.random() * ASSETS.playerTop.length)];
-      this.setSkin(randSkin);
       this.hp = Math.min(this.maxHp, this.hp + 40);
       sounds.playPowerup(3);
     }

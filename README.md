@@ -15,6 +15,8 @@ Use a roda do mouse ou **+/−** para ajustar a câmera; **Restaurar** volta à 
 
 A imagem promocional está em `public/assets/taua-promotional.png` e pode ser baixada pela tela inicial.
 
+Os sobreviventes resgatados permanecem visíveis e se acumulam nas laterais do abrigo, cercado por tela metálica e arame farpado, com passagem central livre. Ao atingir **PLAYER TOP (SUPREMO)**, novos equipamentos preservam a aparência final e recuperam até 40 pontos de vida, sem ultrapassar a vida máxima.
+
 ## Verificação
 
 As otimizações de imagens, rotas, partículas e HUD estão documentadas com medições reproduzíveis em [PERF.md](PERF.md).
