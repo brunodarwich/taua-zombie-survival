@@ -119,8 +119,17 @@ export class Survivor {
   deliver() {
     if (this.state !== 'following') return false;
     this.state = 'delivered';
+    this.group.remove(this.helpSprite);
+    this.sprite.position.y = this.scale * 0.48;
+    this.sprite.material.rotation = 0;
+    this.sprite.scale.set(this.scale, this.scale, 1);
     sounds.playRescue();
     return true;
+  }
+
+  setShelterPosition(position) {
+    this.position.set(position.x, position.y, position.z);
+    this.group.position.copy(this.position);
   }
 
   takeDamage(amount) {

@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { ASSETS } from './config.js';
 import { textureCache } from './systems/TextureCache.js';
 import { WorldNavigation } from './systems/WorldNavigation.js';
+import { createRefugeFence } from './systems/RefugeFence.js';
 
 export const SAFE_BOUNDS = { minX: -10, maxX: 10, minZ: -46, maxZ: -30 };
 export const RESCUE_POINT = { x: 0, y: 0, z: -39 };
@@ -18,8 +19,9 @@ export const STRUCTURES = [
   ['barrel', -29, -17, 2, 2.5, 2], ['barrel', 28, -13, 2, 2.5, 2],
   ['barrel', -31, 30, 2, 2.5, 2], ['barrel', 12, 5, 2, 2.5, 2],
   ['barricade', -19, 7, 8, 2.2, 1.6], ['barricade', 22, -5, 8, 2.2, 1.6],
-  ['wall', -10, -38, 1, 3.2, 17], ['wall', 10, -38, 1, 3.2, 17],
-  ['wall', 0, -46, 21, 3.2, 1]
+  ['fence', -10, -38, 0.18, 3.9, 17], ['fence', 10, -38, 0.18, 3.9, 17],
+  ['fence', 0, -46, 20, 3.9, 0.18],
+  ['fence', -6.75, -30, 6.5, 3.9, 0.18], ['fence', 6.75, -30, 6.5, 3.9, 0.18]
 ];
 
 export function createNavigation() {
@@ -53,6 +55,7 @@ export function createWorld(scene) {
     mesh.position.set(x, y, z); group.add(mesh); return mesh;
   };
   for (const [type, x, z, w, h, d] of STRUCTURES) {
+    if (type === 'fence') continue;
     const group = new THREE.Group(); group.position.set(x, 0, z);
     if (type === 'barrel') {
       const barrel = new THREE.Mesh(new THREE.CylinderGeometry(w / 2, w / 2, h, 12), material(0x8c4853));
@@ -85,6 +88,8 @@ export function createWorld(scene) {
     }
     scene.add(group);
   }
+
+  createRefugeFence(scene, STRUCTURES.filter(([type]) => type === 'fence'));
 
   const refuge = new THREE.Group(); scene.add(refuge);
   const floor = new THREE.Mesh(new THREE.PlaneGeometry(19, 15), new THREE.MeshStandardMaterial({ color: 0x143f3f, emissive: 0x073d31, emissiveIntensity: 0.6 }));

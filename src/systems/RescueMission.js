@@ -3,6 +3,20 @@ export class RescueMission {
     this.navigation = navigation;
     this.reception = reception;
     this.onDelivered = onDelivered;
+    this.rescuedSurvivors = [];
+  }
+
+  arrangeShelter() {
+    // Two banks of residents keep the coordinator and entrance accessible.
+    const count = this.rescuedSurvivors.length;
+    const columns = Math.ceil(Math.sqrt(count / 2));
+    const rows = Math.ceil(count / (columns * 2));
+    this.rescuedSurvivors.forEach((survivor, i) => {
+      const slot = Math.floor(i / 2);
+      const x = 3.5 + (columns > 1 ? (slot % columns) * 4 / (columns - 1) : 0);
+      const z = this.reception.z - 3 + (rows > 1 ? Math.floor(slot / columns) * 8 / (rows - 1) : 4);
+      survivor.setShelterPosition({ x: this.reception.x + (i % 2 ? x : -x), y: 0, z });
+    });
   }
 
   update(player, survivors) {
@@ -17,7 +31,8 @@ export class RescueMission {
         player.rescuedCount++;
         player.score += 350;
         this.onDelivered(survivor);
-        survivor.destroy();
+        this.rescuedSurvivors.push(survivor);
+        this.arrangeShelter();
         survivors.splice(i, 1);
       }
     }

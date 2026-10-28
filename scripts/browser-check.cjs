@@ -51,12 +51,33 @@ require('node:fs').mkdirSync('.cache', { recursive: true });
       for(let i=0;i<1600 && g.spawner.survivors.includes(s);i++){
         s.update(1/60,g.player.position,{x:0,z:-39});g.mission.update(g.player,g.spawner.survivors);
       }
-      return {recruit,delivered:s.state,score:g.player.score,saved:g.player.rescuedCount,removed:!g.spawner.survivors.includes(s),position:s.position.toArray()};
+      return {recruit,delivered:s.state,score:g.player.score,saved:g.player.rescuedCount,removed:!g.spawner.survivors.includes(s),visible:!s.dead && s.group.parent === g.spawner.scene && g.mission.rescuedSurvivors.includes(s),position:s.position.toArray()};
     });
     console.log('escort',delivery);
     assert.deepEqual(delivery.recruit,{state:'following',score:0,saved:0});
     assert.equal(delivery.delivered,'delivered');assert.equal(delivery.score,350);assert.equal(delivery.saved,1);assert.equal(delivery.removed,true);
+    assert.equal(delivery.visible,true);
+    const residents = await page.evaluate(async()=>{
+      const g=(await import(document.querySelector('script[type=module][src*="src/main.js"]').src)).inspectGame();
+      const {Survivor}=await import('/src/entities/Survivor.js');
+      for(let i=0;i<9;i++) {
+        const s=new Survivor(g.spawner.scene,g.player.position,g.navigation);
+        s.startFollowing();g.spawner.survivors.push(s);
+        g.mission.update(g.player,g.spawner.survivors);
+      }
+      const saved=g.player.rescuedCount;
+      for(const s of g.mission.rescuedSurvivors) {
+        s.update(1/60,{x:20,z:0},{x:0,z:-39});s.takeDamage(1000);
+      }
+      g.mission.update(g.player,g.spawner.survivors);
+      g.renderer.setPixelRatio(1);
+      return {count:g.mission.rescuedSurvivors.length,saved,score:g.player.score,
+        allVisible:g.mission.rescuedSurvivors.every(s=>!s.dead && s.group.parent===g.spawner.scene && g.navigation.isFree(s.position) && s.group.position.equals(s.position)),
+        fence:!!g.spawner.scene.getObjectByName('refuge-wire-fence')};
+    });
+    assert.deepEqual(residents,{count:10,saved:10,score:3500,allVisible:true,fence:true});
     await page.waitForTimeout(800); await page.screenshot({path:'.cache/refuge-desktop.png'});
+    await page.evaluate(async()=>{const g=(await import(document.querySelector('script[type=module][src*="src/main.js"]').src)).inspectGame();g.renderer.setPixelRatio(0.3);});
     const stress = await page.evaluate(async()=>{
       const g = (await import(document.querySelector('script[type=module][src*="src/main.js"]').src)).inspectGame();
       while (g.spawner.zombies.length < 45) g.spawner.spawnZombie(g.player.position);
