@@ -72,9 +72,9 @@ function createGround() {
   }
 }
 
-function startGame(skin) {
+function startGame(characterOrSkin) {
   if (player) return;
-  player = new Player(scene, skin);
+  player = new Player(scene, characterOrSkin);
   sounds.init();
   gameRunning = true;
   resetInput();

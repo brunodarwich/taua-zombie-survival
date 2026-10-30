@@ -1,13 +1,24 @@
 import * as THREE from 'three';
-import { CONFIG, ASSETS } from '../config.js';
+import { CONFIG, ASSETS, PLAYABLE_CHARACTERS } from '../config.js';
 import { textureCache } from '../systems/TextureCache.js';
 import { sounds } from '../audio.js';
 
 export class Player {
-  constructor(scene, initialSkinUrl) {
+  constructor(scene, characterOrSkin) {
     this.scene = scene;
     this.tier = 1; // 1: Sem Equipamento, 2: Player, 3: Player Top
-    this.currentSkinUrl = initialSkinUrl;
+    
+    // Suporte tanto para passar o objeto character completo quanto uma URL legada de skin
+    if (typeof characterOrSkin === 'object' && characterOrSkin !== null) {
+      this.character = characterOrSkin;
+      this.currentSkinUrl = characterOrSkin.tiers[1];
+    } else {
+      // Buscar pelo tiers[1] ou default para o primeiro personagem
+      const found = PLAYABLE_CHARACTERS.find(c => c.tiers[1] === characterOrSkin || Object.values(c.tiers).includes(characterOrSkin));
+      this.character = found || PLAYABLE_CHARACTERS[0];
+      this.currentSkinUrl = characterOrSkin || this.character.tiers[1];
+    }
+
     this.equipmentsCollected = 0;
     this.hp = 100;
     this.maxHp = 100;
@@ -77,13 +88,13 @@ export class Player {
     this.equipmentsCollected++;
     if (this.tier === 1) {
       this.tier = 2;
-      const randSkin = ASSETS.player[Math.floor(Math.random() * ASSETS.player.length)];
-      this.setSkin(randSkin);
+      const tierSkin = this.character?.tiers?.[2] || ASSETS.player[0];
+      this.setSkin(tierSkin);
       sounds.playPowerup(2);
     } else if (this.tier === 2) {
       this.tier = 3;
-      const randSkin = ASSETS.playerTop[Math.floor(Math.random() * ASSETS.playerTop.length)];
-      this.setSkin(randSkin);
+      const tierSkin = this.character?.tiers?.[3] || ASSETS.playerTop[0];
+      this.setSkin(tierSkin);
       sounds.playPowerup(3);
     } else {
       this.hp = Math.min(this.maxHp, this.hp + 40);

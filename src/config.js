@@ -1,3 +1,42 @@
+export const PLAYABLE_CHARACTERS = [
+  {
+    id: 'rosa',
+    name: 'Cherry',
+    colorName: 'Rosa',
+    accentColor: '#ff4081',
+    description: 'Ágil e destemida com estilo explosivo.',
+    tiers: {
+      1: 'assets/sem equipamento (16).webp',
+      2: 'assets/player (13).webp',
+      3: 'assets/player top (9).webp'
+    }
+  },
+  {
+    id: 'azul',
+    name: 'Cobalto',
+    colorName: 'Azul',
+    accentColor: '#00d0ff',
+    description: 'Focado e veloz em operações táticas.',
+    tiers: {
+      1: 'assets/sem equipamento (4).webp',
+      2: 'assets/player (2).webp',
+      3: 'assets/player top (1).webp'
+    }
+  },
+  {
+    id: 'preto',
+    name: 'Sombra',
+    colorName: 'Preto',
+    accentColor: '#94a3b8',
+    description: 'Especialista furtivo em combate pesado.',
+    tiers: {
+      1: 'assets/sem equipamento (8).webp',
+      2: 'assets/player (12).webp',
+      3: 'assets/player top (10).webp'
+    }
+  }
+];
+
 export const ASSETS = {
   // Tier 1: Sem equipamento (1 a 20)
   unarmed: Array.from({ length: 20 }, (_, i) => `assets/sem equipamento (${i + 1}).webp`),

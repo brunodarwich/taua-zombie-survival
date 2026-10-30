@@ -54,9 +54,11 @@ export class HUD {
     // Atualizar Tier
     const tierInfo = CONFIG.TIER_PROPERTIES[player.tier];
     if (player.tier !== this.lastTier) {
-      this.tierBadge.textContent = tierInfo.name;
+      const charName = player.character?.name ? `${player.character.name} · ` : '';
+      this.tierBadge.textContent = `${charName}${tierInfo.name}`;
       this.tierBadge.className = `tier-tag tier-${player.tier}`;
-      this.showEvolutionAlert(tierInfo.name);
+      const alertTitle = player.character?.name ? `${player.character.name.toUpperCase()} EVOLUIU: ${tierInfo.name}` : `EVOLUÇÃO ATIVADA: ${tierInfo.name}`;
+      this.showEvolutionAlert(alertTitle);
       this.lastTier = player.tier;
     }
 
