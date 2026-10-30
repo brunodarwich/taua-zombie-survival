@@ -51,13 +51,16 @@ export class HUD {
       this.hpText.textContent = `${roundedHp} / ${player.maxHp}`;
     }
 
-    // Atualizar Tier
-    const tierInfo = CONFIG.TIER_PROPERTIES[player.tier];
+    // Atualizar Tier e Arma
     if (player.tier !== this.lastTier) {
+      const weaponConfig = player.getWeaponConfig ? player.getWeaponConfig() : CONFIG.TIER_PROPERTIES[player.tier];
       const charName = player.character?.name ? `${player.character.name} · ` : '';
-      this.tierBadge.textContent = `${charName}${tierInfo.name}`;
+      const weaponName = weaponConfig?.weaponName ? ` (${weaponConfig.weaponName})` : ` · ${weaponConfig?.name || ''}`;
+      this.tierBadge.textContent = `${charName}T${player.tier}${weaponName}`;
       this.tierBadge.className = `tier-tag tier-${player.tier}`;
-      const alertTitle = player.character?.name ? `${player.character.name.toUpperCase()} EVOLUIU: ${tierInfo.name}` : `EVOLUÇÃO ATIVADA: ${tierInfo.name}`;
+      const alertTitle = player.character?.name 
+        ? `${player.character.name.toUpperCase()} DESBLOQUEOU: ${weaponConfig?.weaponName || weaponConfig?.name}` 
+        : `EVOLUÇÃO ATIVADA: ${weaponConfig?.weaponName || weaponConfig?.name}`;
       this.showEvolutionAlert(alertTitle);
       this.lastTier = player.tier;
     }

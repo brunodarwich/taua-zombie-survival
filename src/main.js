@@ -158,18 +158,22 @@ function setupEventListeners() {
 function handleShooting(time) {
   if (!inputState.isMouseDown || !player.canShoot(time)) return;
   player.lastShotTime = time;
-  const props = CONFIG.TIER_PROPERTIES[player.tier];
+  const props = player.getWeaponConfig ? player.getWeaponConfig() : CONFIG.TIER_PROPERTIES[player.tier];
   const target = nearestZombie(player.position, spawner.zombies);
   if (target) {
     player.aimDirection.subVectors(target.position, player.position).setY(0).normalize();
     player.sprite.scale.x = (player.aimDirection.x < 0 ? -1 : 1) * player.scale;
   }
-  sounds.playShoot(player.tier);
+  sounds.playShoot(player.tier, player.character?.id);
   const muzzle = player.position.clone().setY(1.3).addScaledVector(player.aimDirection, 0.7);
   particleSystem.spawnMuzzleFlash(muzzle, player.aimDirection, props.bulletColor);
   const base = Math.atan2(player.aimDirection.z, player.aimDirection.x);
-  for (let i = 0; i < props.bulletSpread; i++) {
-    const angle = base + (props.bulletSpread === 2 ? (i ? 0.1 : -0.1) : props.bulletSpread === 3 ? (i - 1) * 0.14 : 0);
+  const spreadCount = props.bulletSpread || 1;
+  const totalSpread = props.spreadAngle || (spreadCount === 2 ? 0.2 : spreadCount === 3 ? 0.28 : 0);
+
+  for (let i = 0; i < spreadCount; i++) {
+    const angleOffset = spreadCount > 1 ? -totalSpread / 2 + (totalSpread / (spreadCount - 1)) * i : 0;
+    const angle = base + angleOffset;
     bullets.push(new Bullet(scene, player.position, new THREE.Vector3(Math.cos(angle), 0, Math.sin(angle)), props));
   }
 }

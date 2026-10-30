@@ -145,6 +145,19 @@ body {
   letter-spacing: 0.02em;
 }
 
+.char-archetype {
+  font-size: 0.74rem;
+  font-weight: 800;
+  color: var(--char-accent);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 3px 8px;
+  border-radius: 6px;
+  margin-bottom: 8px;
+  letter-spacing: 0.03em;
+  text-align: center;
+}
+
 .char-desc {
   font-size: 0.8rem;
   color: #94a3b8;
@@ -200,6 +213,17 @@ body {
   font-size: 0.68rem;
   font-weight: 800;
   color: var(--char-accent);
+}
+
+.evo-weapon-title {
+  font-size: 0.58rem;
+  color: #94a3b8;
+  text-align: center;
+  max-width: 68px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
 }
 
 .evo-arrow {

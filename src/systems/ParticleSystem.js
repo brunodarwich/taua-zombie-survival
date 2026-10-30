@@ -124,6 +124,37 @@ export class ParticleSystem {
     }
   }
 
+  spawnExplosion(position, color = 0xff2a6d, radius = 3.5) {
+    this.flash(position, 0xfff4dc, radius * 2.2, 0.12);
+    this.flash(position, color, radius * 1.5, 0.28, true);
+    this.spawnHitSparks(position, color, 12);
+    this.spawnHitSparks(position, 0xffaa00, 6);
+  }
+
+  spawnLaserImpact(position, color = 0x00ffff, direction = null) {
+    this.flash(position, 0xffffff, 6, 0.08);
+    this.flash(position, color, 1.2, 0.18, true);
+    const start = this.activeParticles.length;
+    this.spawnHitSparks(position, color, 10);
+    if (direction) {
+      for (let i = start; i < this.activeParticles.length; i++) {
+        this.activeParticles[i].velocity.addScaledVector(direction, -5);
+      }
+    }
+  }
+
+  spawnVoidImpact(position, color = 0xa855f7, direction = null) {
+    this.flash(position, 0xe9d5ff, 8, 0.1);
+    this.flash(position, color, 1.8, 0.32, true);
+    const start = this.activeParticles.length;
+    this.spawnHitSparks(position, color, 12);
+    if (direction) {
+      for (let i = start; i < this.activeParticles.length; i++) {
+        this.activeParticles[i].velocity.addScaledVector(direction, -6);
+      }
+    }
+  }
+
   // Explosão de resgate ou level up (dourado / azul brilhante)
   spawnBurst(position, color = 0x00f0ff, count = 16) {
     const actualCount = Math.min(count, this.maxActive - this.activeParticles.length);

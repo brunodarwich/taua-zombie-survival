@@ -64,6 +64,15 @@ export class Player {
     this.scene.add(this.group);
   }
 
+  getWeaponConfig() {
+    const charWeapon = this.character?.tierConfig?.[this.tier];
+    const fallbackProps = CONFIG.TIER_PROPERTIES[this.tier];
+    return {
+      ...fallbackProps,
+      ...(charWeapon || {})
+    };
+  }
+
   updateProperties() {
     const props = CONFIG.TIER_PROPERTIES[this.tier];
     this.scale = props.scale;
@@ -71,17 +80,11 @@ export class Player {
     this.sprite.position.y = this.scale * 0.48;
     this.shadow.scale.set(this.scale * 0.32, this.scale * 0.32, 1);
 
-    // Atualizar cor e intensidade do spotlight
-    if (this.tier === 1) {
-      this.spotLight.color.setHex(0xffffff);
-      this.spotLight.intensity = 2.0;
-    } else if (this.tier === 2) {
-      this.spotLight.color.setHex(0x00f0ff);
-      this.spotLight.intensity = 2.8;
-    } else {
-      this.spotLight.color.setHex(0xff0055);
-      this.spotLight.intensity = 3.6;
-    }
+    // Atualizar cor e intensidade do spotlight de acordo com a energia do personagem e tier
+    const weapon = this.getWeaponConfig();
+    const lightColor = weapon.bulletColor || (this.tier === 1 ? 0xffffff : this.tier === 2 ? 0x00f0ff : 0xff0055);
+    this.spotLight.color.setHex(lightColor);
+    this.spotLight.intensity = this.tier === 1 ? 2.0 : this.tier === 2 ? 2.8 : 3.6;
   }
 
   upgrade() {
@@ -190,7 +193,7 @@ export class Player {
   }
 
   canShoot(currentTime) {
-    const props = CONFIG.TIER_PROPERTIES[this.tier];
+    const props = this.getWeaponConfig();
     return (currentTime - this.lastShotTime) >= props.fireRate;
   }
 }
